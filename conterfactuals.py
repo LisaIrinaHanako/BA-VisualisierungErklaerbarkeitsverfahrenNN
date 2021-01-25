@@ -2,6 +2,7 @@ import fatf.transparency.predictions.counterfactuals as fatf_cf
 import numpy as np
 import helper_methods as helper
 from pprint import pprint
+from skorch import NeuralNetClassifier
 from interactive_ba_preparation_master.model import load_model
 from interactive_ba_preparation_master.dataset import German_Credit
 
@@ -11,7 +12,7 @@ ds = German_Credit(path="./interactive_ba_preparation_master/german.data")
 
 # Helper function to get categorical indices
 def get_categorical_idx():
-    all_categories = ds.column_names
+    all_categories = ds.column_names[: len(ds.column_names)]
     categorical_vars = ds.categorical_variables
     max_length = len(categorical_vars)
     categorical_idx = []
@@ -23,9 +24,11 @@ def get_categorical_idx():
     return categorical_idx
 
 # Function to get a Counterfactual Explainer
-def get_counterfactual_explainer():
+def get_counterfactual_explainer(datapoint):
     cat_idx_list = get_categorical_idx()
-    explainer = fatf_cf.CounterfactualExplainer(dataset = ds,
+    print("is ds.data ndarray? ", isinstance(ds.data, np.ndarray), "\n type of ds.data: ", type(ds.data) )
+    explainer = fatf_cf.CounterfactualExplainer(predictive_function = clf.predict,
+                                                dataset = ds,
                                                 categorical_indices=cat_idx_list)
     return explainer
 
@@ -84,13 +87,14 @@ def main():
     y_test = helper.reshape(y_test)
 
     # print("x test ", x_test.shape, "\n y test ", y_test.shape, "\n x train " , x_train.shape, "\n y train ", y_train.shape)
-    classes = ds.label
+    classes = list(set(ds.label))
+
     # TODO erstmal einen aussuchen
     dp_index = 1
 
     # describe selected datapiont
     describe_data_point(x_test, y_test, classes, dp_index)
-    cf_explainer = get_counterfactual_explainer()
+    cf_explainer = get_counterfactual_explainer(x_test[dp_index, : ])
     
     # Get a Counterfactual Explanation tuple for this data point
     dp_cfs, dp_cfs_distances, dp_cfs_predictions = cf_explainer.explain_instance(x_test)
