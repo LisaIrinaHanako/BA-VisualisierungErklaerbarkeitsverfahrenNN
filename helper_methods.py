@@ -1,4 +1,29 @@
+from sklearn.preprocessing import StandardScaler
+import torch
 
+# Function to get test, training and training net samples and labels
+def get_samples_and_labels(ds, clf):
+    
+        # get trianing and test tensors
+        x_train, y_train, x_test, y_test = ds.torch() 
+
+        # reshape all tensors to 2d
+        x_train = reshape(x_train)
+        x_test = reshape(x_test)
+
+        # get correct labels
+        y_train = reshape(y_train)
+        y_test = reshape(y_test)
+
+        # get net labels
+        y_net_train = clf(x_train)
+        y_net_test = clf(x_test)
+
+        # format net labels
+        y_net_train = torch.argmax(y_net_train.detach(), dim=-1)
+        y_net_test = torch.argmax(y_net_test.detach(), dim=-1)
+
+        return x_test, y_test, x_train, y_train, y_net_test, y_net_train
 
 # Function to shape x-dimensional tensors into 2d tensors    
 def reshape(tensor):
@@ -15,3 +40,19 @@ def reshape(tensor):
     # reshape tensor to 2d tensor
     tensor = tensor.reshape(first_dim, second_dim)
     return tensor
+
+
+# Function to get list of all Feature labels for a single datapoint
+def get_feature_labels(ds, number_of_features):
+    all_feature_labels = []
+    for i in range(number_of_features):
+        all_feature_labels.append(ds.index_to_label(i))
+    return all_feature_labels
+
+
+# Function to inverse transform preprocessing of numerical features
+# TODO: die kann noch nix
+def inverse_preprocessing(data):
+    transformer = scaler = StandardScaler()
+    inversed = transformer.inverse_transform(data)
+    return inversed
