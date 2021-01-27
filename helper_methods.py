@@ -1,4 +1,6 @@
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.utils.validation import check_is_fitted
+from sklearn.compose import ColumnTransformer
 import torch
 
 # Function to get test, training and training net samples and labels
@@ -52,7 +54,32 @@ def get_feature_labels(ds, number_of_features):
 
 # Function to inverse transform preprocessing of numerical features
 # TODO: die kann noch nix
-def inverse_preprocessing(data):
-    transformer = scaler = StandardScaler()
-    inversed = transformer.inverse_transform(data)
-    return inversed
+def inverse_preprocessing(ds, datapoint, sample_id, feature_name):
+    scaler = StandardScaler()
+    
+    transformer = ColumnTransformer(transformers=[("num", scaler, ds.numerical_variables), ("ohe", OneHotEncoder(), ds.categorical_variables)])
+    transformer.fit_transform(ds.data)
+
+
+    feature = datapoint[sample_id, feature_name]
+    for i in range(len(datapoint[sample_id,:])):
+        if type(datapoint[sample_id, i]) != str:
+            scaler.fit(datapoint)
+
+    if type(feature) != str:
+        inversed = scaler.inverse_transform(feature)
+    else:
+        inversed = datapoint[sample_id, :]
+
+    return inversed[sample_id]
+    
+
+# Function to make and print predictions for given datapoints and classifier
+def print_prediction(datapoint, clf_object): 
+  
+    # Predicton on test 
+    y_pred = clf_object.predict(datapoint) 
+    print("Predicted values:") 
+    print(y_pred) 
+    return y_pred 
+    
