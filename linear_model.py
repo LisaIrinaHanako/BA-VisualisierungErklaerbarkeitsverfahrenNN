@@ -47,7 +47,7 @@ def main():
 
     
     # get trianing and test tensors and net trained labels
-    x_train, y_train, x_test, y_test = helper.get_samples_and_labels(ds, clf)
+    x_test, y_test, x_train, y_train, y_net_test, y_net_train = helper.get_samples_and_labels(ds, clf)
     
     # calculate actual classifier result
     classifier = calc_classifier(x_train, x_test, y_train, y_test,
@@ -56,6 +56,9 @@ def main():
                     tol, warm_start, positive, 
                     random_state, selection)
     predictions = classifier.predict(x_test)
+    
+    print(predictions)
+    print(y_test)
     # calculate accuracy
     acc = accuracy_score(predictions, y_test)
     avg = avg + acc
@@ -64,6 +67,8 @@ def main():
     print("Accuracy of {} for Lasso".format
                             (avg / 20 * 100))
     print("\n", "-"*80, "\n")
+
+    helper.print_prediction(x_test, clf)
 
 
 # Calling main function 
