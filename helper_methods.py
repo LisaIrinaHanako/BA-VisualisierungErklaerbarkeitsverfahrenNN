@@ -83,3 +83,20 @@ def print_prediction(datapoint, clf_object):
     print(y_pred) 
     return y_pred 
     
+
+def make_tree_annotations(pos, text, font_size=10, font_color='rgb(250,250,250)'):
+    L=len(pos)
+    if len(text)!=L:
+        raise ValueError('The lists pos and text must have the same len')
+    annotations = []
+    labels = zip(ds.cols_onehot, )
+    for k in range(L):
+        annotations.append(
+            dict(
+                text=labels[k],
+                x=pos[k][0], y=2*M-position[k][1],
+                xref='x1', yref='y1',
+                font=dict(color=font_color, size=font_size),
+                showarrow=False)
+        )
+    return annotations
