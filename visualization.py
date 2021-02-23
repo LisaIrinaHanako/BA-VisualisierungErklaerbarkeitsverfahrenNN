@@ -140,7 +140,7 @@ def create_and_get_tree(node_index, feature, x_test, threshold, datapoint_index,
                       name='Pfad',
                       marker=dict(symbol='square',
                                     size=70,
-                                    color='#6175c1',    #'#DB4551',
+                                    color= '#c9f283', #'#6175c1',    #'#DB4551',
                                     line=dict(color='rgb(50,50,50)', width=1)
                                     ),
                       text=labels,
@@ -175,7 +175,7 @@ def get_labels(labels, node_index, feature, x_test, threshold, datapoint_index, 
         threshold_value = threshold[node_id]
         feature_name_split = feature_name.split("_")
         pred = predictions[node_id]
-        labels.append('Knoten <br>' + '<br>'.join(feature_name_split) + '<br>')
+        labels.append('<br>'.join(feature_name_split) + '<br>')
         # print("decision node {node} : (datapoint[{sample}, (original: still open) scaled: {feature}] = {value}) "
         #       "{inequality} {threshold})".format(
         #           node=node_id,

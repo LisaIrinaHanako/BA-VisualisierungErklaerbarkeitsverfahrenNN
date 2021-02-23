@@ -54,24 +54,17 @@ def get_feature_labels(ds, number_of_features):
 
 # Function to inverse transform preprocessing of numerical features
 # TODO: die kann noch nix
-def inverse_preprocessing(ds, datapoint, sample_id, feature_name):
-    scaler = StandardScaler()
-    
-    transformer = ColumnTransformer(transformers=[("num", scaler, ds.numerical_variables), ("ohe", OneHotEncoder(), ds.categorical_variables)])
-    transformer.fit_transform(ds.data)
+def inverse_preprocessing(ds, datapoint, sample_id):
+    transformer = ds.transformer
+    scaler = transformer.named_transformers_['num']
+    ohe = transformer.named_transformers_['ohe']
+    features = datapoint[sample_id]
+    num_features = features[0:len(ds.numerical_variables)]
+    cat_features = features[len(num_features):]
 
-
-    feature = datapoint[sample_id, feature_name]
-    for i in range(len(datapoint[sample_id,:])):
-        if type(datapoint[sample_id, i]) != str:
-            scaler.fit(datapoint)
-
-    if type(feature) != str:
-        inversed = scaler.inverse_transform(feature)
-    else:
-        inversed = datapoint[sample_id, :]
-
-    return inversed[sample_id]
+    inversed_num = scaler.inverse_transform(num_features)
+    inversed_cat = ohe.inverse_transform(cat_features.reshape(1, -1) )
+    return inversed_num, inversed_cat
     
 
 # Function to make and print predictions for given datapoints and classifier
@@ -83,20 +76,3 @@ def print_prediction(datapoint, clf_object):
     print(y_pred) 
     return y_pred 
     
-
-def make_tree_annotations(pos, text, font_size=10, font_color='rgb(250,250,250)'):
-    L=len(pos)
-    if len(text)!=L:
-        raise ValueError('The lists pos and text must have the same len')
-    annotations = []
-    labels = zip(ds.cols_onehot, )
-    for k in range(L):
-        annotations.append(
-            dict(
-                text=labels[k],
-                x=pos[k][0], y=2*M-position[k][1],
-                xref='x1', yref='y1',
-                font=dict(color=font_color, size=font_size),
-                showarrow=False)
-        )
-    return annotations
