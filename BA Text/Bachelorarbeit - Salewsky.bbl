@@ -1,0 +1,133 @@
+\begin{thebibliography}{10}
+
+\bibitem{Basics-(un/semi)supervised}
+{\em Welche {Arten} von {Maschinellem} {Lernen} gibt es?}, \btxmonjanlong{}
+  2021.
+
+\bibitem{Basics-ML-Blog}
+{\em Wie lernen {Maschinen}? - {Grundlegende} {Begriffe} - {ML}-{Blog} •
+  {Grundlagen}}, \btxmonjanlong{} 2021.
+
+\bibitem{Basics-ReLU}
+{\sc Agarap, Abien~Fred}: {\em Deep {Learning} using {Rectified} {Linear}
+  {Units} ({ReLU})}.
+\newblock arXiv:1803.08375 [cs, stat], \btxmonfeblong{} 2019.
+
+\bibitem{Basics-Softmax}
+{\sc Alabassy, B.}, {\sc M.~Safar} \btxandlong{}\ {\sc M.~W. El-Kharashi}: {\em
+  A {High}-{Accuracy} {Implementation} for {Softmax} {Layer} in {Deep} {Neural}
+  {Networks}}.
+\newblock \Btxinlong{}\ {\em 2020 15th {Design} {Technology} of {Integrated}
+  {Systems} in {Nanoscale} {Era} ({DTIS})}, \btxpageslong{}\ 1--6,
+  \btxmonaprlong{} 2020.
+
+\bibitem{BachPixelwise}
+{\sc Bach, Sebastian}, {\sc Alexander Binder}, {\sc Grégoire Montavon}, {\sc
+  Frederick Klauschen}, {\sc Klaus-Robert Müller} \btxandlong{}\ {\sc Wojciech
+  Samek}: {\em On {Pixel}-{Wise} {Explanations} for {Non}-{Linear} {Classifier}
+  {Decisions} by {Layer}-{Wise} {Relevance} {Propagation}}.
+\newblock PLOS ONE, 10(7), \btxmonjullong{} 2015.
+
+\bibitem{Basics-Dropout}
+{\sc Choe, Junsuk} \btxandlong{}\ {\sc Hyunjung Shim}: {\em Attention-{Based}
+  {Dropout} {Layer} for {Weakly} {Supervised} {Object} {Localization}}.
+\newblock \Btxinlong{}\ {\em 2019 {IEEE}/{CVF} {Conference} on {Computer}
+  {Vision} and {Pattern} {Recognition} ({CVPR})}, \btxpageslong{}\ 2214--2223,
+  Long Beach, CA, USA, \btxmonjunlong{} 2019. IEEE.
+
+\bibitem{Basics-Statistik-Cramer}
+{\sc Cramer, E.} \btxandlong{}\ {\sc U.~Kamps}: {\em Grundlagen der
+  wahrscheinlichkeitsrechnung und statistik: {Ein} skript für studierende der
+  informatik, der ingenieur- und wirtschaftswissenschaften}.
+\newblock Springer-lehrbuch. Springer Berlin Heidelberg, 2014.
+
+\bibitem{Basics-Softmax-Hardware2}
+{\sc Du, Gaoming}, {\sc Chao Tian}, {\sc Zhenmin Li}, {\sc Duoli Zhang}, {\sc
+  Yongsheng Yin} \btxandlong{}\ {\sc Yiming Ouyang}: {\em Efficient {Softmax}
+  {Hardware} {Architecture} for {Deep} {Neural} {Networks}}.
+\newblock \Btxinlong{}\ {\em Proceedings of the 2019 on {Great} {Lakes}
+  {Symposium} on {VLSI}}, \btxpageslong{}\ 75--80, Tysons Corner VA USA,
+  \btxmonmaylong{} 2019. ACM.
+
+\bibitem{Basics-Softmax-Hardware}
+{\sc Hu, R.}, {\sc B.~Tian}, {\sc S.~Yin} \btxandlong{}\ {\sc S.~Wei}: {\em
+  Efficient {Hardware} {Architecture} of {Softmax} {Layer} in {Deep} {Neural}
+  {Network}}.
+\newblock \Btxinlong{}\ {\em 2018 {IEEE} 23rd {International} {Conference} on
+  {Digital} {Signal} {Processing} ({DSP})}, \btxpageslong{}\ 1--5,
+  \btxmonnovlong{} 2018.
+
+\bibitem{LundbergSHAPDeepExplainer}
+{\sc Lundberg, Scott~M.} \btxandlong{}\ {\sc Su-In Lee}: {\em A {Unified}
+  {Approach} to {Interpreting} {Model} {Predictions}}.
+\newblock Advances in Neural Information Processing Systems, 30:4765--4774,
+  2017.
+
+\bibitem{MahajanDiCe}
+{\sc Mahajan, Divyat}, {\sc Chenhao Tan} \btxandlong{}\ {\sc Amit Sharma}: {\em
+  Preserving {Causal} {Constraints} in {Counterfactual} {Explanations} for
+  {Machine} {Learning} {Classifiers}}.
+\newblock arXiv:1912.03277 [cs, stat], \btxmonjunlong{} 2020.
+
+\bibitem{Basics-ML}
+{\sc Mohri, Mehryar}, {\sc Afshin Rostamizadeh} \btxandlong{}\ {\sc Ameet
+  Talwalkar}: {\em Foundations of {Machine} {Learning}, second edition}.
+\newblock MIT Press, \btxmondeclong{} 2018.
+
+\bibitem{MontavonLRP}
+{\sc Montavon, Grégoire}, {\sc Wojciech Samek} \btxandlong{}\ {\sc
+  Klaus-Robert Müller}: {\em Methods for interpreting and understanding deep
+  neural networks}.
+\newblock Digital Signal Processing, 73:1--15, \btxmonfeblong{} 2018.
+
+\bibitem{MothilalDiCE}
+{\sc Mothilal, Ramaravind~Kommiya}, {\sc Amit Sharma} \btxandlong{}\ {\sc
+  Chenhao Tan}: {\em Explaining {Machine} {Learning} {Classifiers} through
+  {Diverse} {Counterfactual} {Explanations}}.
+\newblock arXiv:1905.07697 [cs, stat], \btxmondeclong{} 2019.
+
+\bibitem{Basics-ML2}
+{\sc Naqa, Issam~El}, {\sc Ruijiang Li} \btxandlong{}\ {\sc Martin~J. Murphy}:
+  {\em Machine {Learning} in {Radiation} {Oncology}: {Theory} and
+  {Applications}}.
+\newblock Springer, \btxmonjunlong{} 2015.
+
+\bibitem{Basics-Linear}
+{\sc Rajaguru, Harikumar} \btxandlong{}\ {\sc Sunil~Kumar Prabhakar}: {\em
+  E-health {Design} with {Spectral} {Analysis}, {Linear} {Layer} {Neural}
+  {Networks} and {Adaboost} {Classifier} for {Epilepsy} {Classification} from
+  {EEG} {Signals}}.
+\newblock \Btxinlong{}\ {\sc Hemanth, D.~Jude} \btxandlong{}\ {\sc S.~Smys}\
+  (\btxeditorslong{}): {\em Computational {Vision} and {Bio} {Inspired}
+  {Computing}}, Lecture {Notes} in {Computational} {Vision} and {Biomechanics},
+  \btxpageslong{}\ 634--640, Cham, 2018. Springer International Publishing.
+
+\bibitem{Basics-Statistik-Sachs}
+{\sc Sachs, Michael}: {\em Wahrscheinlichkeitsrechnung und {Statistik}: für
+  {Ingenieurstudierende} an {Hochschulen}: mit 35 {Bildern}, 93 {Beispielen}
+  und 71 {Aufgaben}}.
+\newblock Mathematik-{Studienhilfen}. Fachbuchverlag Leipzig im Carl Hanser
+  Verlag, München, 5. Auflage \btxeditionlong{}, 2018.
+
+\bibitem{Basics-ANN-NN-RNN}
+{\sc Sazli, Murat~H}: {\em A {BRIEF} {REVIEW} {OF} {FEED}-{FORWARD} {NEURAL}
+  {NETWORKS}}.
+\newblock \btxpagelong{}~7.
+
+\bibitem{WachterCounterfactuals}
+{\sc Wachter, Sandra}, {\sc Brent Mittelstadt} \btxandlong{}\ {\sc Chris
+  Russell}: {\em Counterfactual {Explanations} without {Opening} the {Black}
+  {Box}: {Automated} {Decisions} and the {GDPR}}.
+\newblock SSRN Electronic Journal, \btxmonmarlong{} 2018.
+
+\bibitem{Basics-Training-Daten-ehler-CrossValidation}
+{\sc Wurm, Christian}: {\em Neuronale {Netze} und {Tiefe} {Architekturen}}.
+\newblock \btxpagelong{}\ 139.
+
+\bibitem{Basics-CNN}
+{\sc Yamashita, Rikiya}, {\sc Mizuho Nishio}, {\sc Richard Kinh~Gian Do}
+  \btxandlong{}\ {\sc Kaori Togashi}: {\em Convolutional neural networks: an
+  overview and application in radiology}.
+\newblock Insights into Imaging, 9(4):611--629, \btxmonauglong{} 2018.
+
+\end{thebibliography}

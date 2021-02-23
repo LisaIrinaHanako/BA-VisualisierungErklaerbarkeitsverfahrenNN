@@ -1,0 +1,138 @@
+This is BibTeX, Version 0.99d
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: Bachelorarbeit - Salewsky.aux
+Reallocating 'name_of_file' (item size: 1) to 23 items.
+A level-1 auxiliary file: kapitel/titelseite.aux
+Reallocating 'name_of_file' (item size: 1) to 23 items.
+A level-1 auxiliary file: kapitel/einleitung.aux
+White space in argument---line 31 of file kapitel/einleitung.aux
+ : \citation{Referenz
+ :                    Datensatz Paper?}
+I'm skipping whatever remains of this command
+Reallocating 'name_of_file' (item size: 1) to 31 items.
+A level-1 auxiliary file: kapitel/vorgehen_und_ziele.aux
+White space in argument---line 64 of file kapitel/vorgehen_und_ziele.aux
+ : \citation{Goodfellow-et-al-2016
+ :                                 ??}
+I'm skipping whatever remains of this command
+White space in argument---line 66 of file kapitel/vorgehen_und_ziele.aux
+ : \citation{Montavon
+ :                    ?? }
+I'm skipping whatever remains of this command
+White space in argument---line 78 of file kapitel/vorgehen_und_ziele.aux
+ : \citation{Montavon
+ :                    ??}
+I'm skipping whatever remains of this command
+White space in argument---line 100 of file kapitel/vorgehen_und_ziele.aux
+ : \citation{basics
+ :                  relu}
+I'm skipping whatever remains of this command
+White space in argument---line 112 of file kapitel/vorgehen_und_ziele.aux
+ : \citation{Basics
+ :                  Kostenfunktion}
+I'm skipping whatever remains of this command
+White space in argument---line 125 of file kapitel/vorgehen_und_ziele.aux
+ : \citation{Geron
+ :                 2017}
+I'm skipping whatever remains of this command
+Reallocating 'name_of_file' (item size: 1) to 33 items.
+A level-1 auxiliary file: kapitel/konkrete_algorithmen.aux
+Reallocating 'name_of_file' (item size: 1) to 20 items.
+A level-1 auxiliary file: kapitel/webpage.aux
+Reallocating 'name_of_file' (item size: 1) to 23 items.
+A level-1 auxiliary file: kapitel/ergebnisse.aux
+Reallocating 'name_of_file' (item size: 1) to 18 items.
+A level-1 auxiliary file: kapitel/Todos.aux
+Reallocating 'name_of_file' (item size: 1) to 19 items.
+A level-1 auxiliary file: kapitel/anhang.aux
+Reallocating 'name_of_file' (item size: 1) to 9 items.
+The style file: gerplain.bst
+Reallocating 'name_of_file' (item size: 1) to 20 items.
+Reallocating 'name_of_file' (item size: 1) to 23 items.
+A level-1 auxiliary file: kapitel/erklaerung.aux
+Database file #1: literatur/Literatur.bib
+I was expecting a `,' or a `}'---line 71 of file literatur/Literatur.bib
+ : @article{SHAPDeepExplainer 
+ :                            Shrikumar,
+I'm skipping whatever remains of this entry
+I was expecting a `,' or a `}'---line 226 of file literatur/Literatur.bib
+ : @misc{Ridge 
+ :             Lasso Elastic Net,
+I'm skipping whatever remains of this entry
+Warning--I didn't find a database entry for "RudinStopExplaining"
+Warning--I didn't find a database entry for "RasExplaining"
+Warning--I didn't find a database entry for "GuidottiErklaerbarkeit"
+Warning--I didn't find a database entry for "MoellerKonstruktivismus"
+Warning--I didn't find a database entry for "FrosstDecisionTree"
+Warning--I didn't find a database entry for "BozDecisionTrees"
+Warning--I didn't find a database entry for "ChenDecisionTrees"
+Warning--I didn't find a database entry for "ISLRBuchLinear"
+Warning--I didn't find a database entry for "SmithCounterfactuals"
+Warning--I didn't find a database entry for "GoyalCounterfactuals"
+Warning--I didn't find a database entry for "ISLRBuch"
+Warning--I didn't find a database entry for "Goodfellow-et-al-2016"
+Warning--I didn't find a database entry for "10.1145/2857546.2857580/Sigmoid"
+Warning--I didn't find a database entry for "10.1145/3374135.3385313/relu"
+Warning--I didn't find a database entry for "10.5555/2283516.2283603"
+Warning--I didn't find a database entry for "Guidotti"
+Warning--I didn't find a database entry for "InterpretableMLMolnar"
+Warning--I didn't find a database entry for "TripathySurrogate"
+Warning--I didn't find a database entry for "TanSurrogate"
+Warning--I didn't find a database entry for "CangCounterfactuals"
+Warning--I didn't find a database entry for "StrumbeljFeatureContribution"
+Warning--I didn't find a database entry for "PalczewskaFeatureContribution"
+Warning--I didn't find a database entry for "RastogiDexicionTree"
+Warning--I didn't find a database entry for "NguyenDecisionTree"
+Warning--I didn't find a database entry for "SokolFatForensics"
+Warning--I didn't find a database entry for "ShrikumarSHAPDeepExplainer"
+Warning--I didn't find a database entry for "ShapleyValMolnar"
+Warning--I didn't find a database entry for "CastroShapley"
+Warning--I didn't find a database entry for "MONTAVON20181"
+Warning--to sort, need author or key in Basics-ML-Blog
+Warning--to sort, need author or key in Basics-(un/semi)supervised
+Warning--empty journal in Basics-ANN-NN-RNN
+Warning--empty year in Basics-ANN-NN-RNN
+Warning--empty journal in Basics-Training-Daten-ehler-CrossValidation
+Warning--empty year in Basics-Training-Daten-ehler-CrossValidation
+You've used 21 entries,
+            2343 wiz_defined-function locations,
+            740 strings with 10432 characters,
+and the built_in function-call counts, 7574 in all, are:
+= -- 762
+> -- 328
+< -- 7
++ -- 132
+- -- 108
+* -- 597
+:= -- 1157
+add.period$ -- 45
+call.type$ -- 21
+change.case$ -- 95
+chr.to.int$ -- 0
+cite$ -- 27
+duplicate$ -- 346
+empty$ -- 614
+format.name$ -- 108
+if$ -- 1702
+int.to.chr$ -- 0
+int.to.str$ -- 21
+missing$ -- 33
+newline$ -- 85
+num.names$ -- 40
+pop$ -- 148
+preamble$ -- 1
+purify$ -- 95
+quote$ -- 0
+skip$ -- 277
+stack$ -- 0
+substring$ -- 316
+swap$ -- 132
+text.length$ -- 7
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 76
+warning$ -- 6
+while$ -- 62
+width$ -- 23
+write$ -- 203
+(There were 9 error messages)

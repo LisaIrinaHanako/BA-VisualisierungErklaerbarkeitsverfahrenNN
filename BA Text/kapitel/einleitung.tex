@@ -1,0 +1,98 @@
+% einleitung.tex
+\chapter{Einleitung}
+\label{chapter: Einleitung}
+\section{Motivation und Hintergrund}
+\label{section: Motivation}
+
+Mit zunehmendem Einsatz von maschinellen Lernverfahren wächst zugleich auch der Bedarf an guten Erklärungen. Die Zahl der Bereiche des täglichen Lebens, in denen Entscheidungen von Maschinen getroffen werden, wächst stetig. Gleichzeitig erhöht sich die Komplexität der Probleme sowie die Anzahl der nutzbaren Informationen. Die zur Entscheidungsfindung notwendigen Algorithmen arbeiten meist auf eine komplexe Weise und mit einer für Menschen ungreifbaren Menge von Daten und Eigenschaften \cite{RudinStopExplaining}. 
+
+
+Je stärker einzelne Personen von solchen Entscheidungen betroffen sind, umso wichtiger ist es, Vertrauen zu schaffen. Damit geht zugleich die Verbesserung des Verständnisses maschineller Entscheidungen einher\cite{RasExplaining}.
+
+
+Mittlerweile gibt es zahlreiche verschiedene Ansätze, die unterschiedlichste Lösungsvorschläge für besseres Verständnis bieten. Sie lassen sich in fünf grobe Kategorien unterteilen, für die jeweils eine große Menge konkreter Algorithmen existieren. 
+\begin{definition}
+In dieser Arbeit werden mit der Bezeichnung \glqq Ansatz \grqq die entsprechenden Grundideen zum Öffnen der Black Box bezeichnet. 
+\end{definition}
+
+\begin{definition}
+Algorithmus, (Erklärbarkeits-)modell oder - methode bezeichnen hingegen die konkreten Implementierungen, die einem Ansatz zugeordnet werden können.
+\end{definition}
+
+Zum Einen ist es möglich vollständig auf die Implementierung von nicht-interpretierbare Algorithmen zu verzichten. Es können stattdessen Methoden verwendet werden, die nur eine begrenzte Anzahl von Eigenschaften betrachten und nur einfache Zusammenhänge beschreiben \cite{RudinStopExplaining}. Auf diese Weise bleiben die Entscheidungen für Menschen greifbar und verständlich. Eine solche starke Einschränkung hat jedoch im alltäglichen Leben oftmals Grenzen. Diese zeigen sich in verminderter Genauigkeit, sobald aufgrund der gewählten Begrenzungen, zu wenig Eigenschaften gewählt oder komplexere Zusammenhänge nicht mehr dargestellt werden können \cite{GuidottiErklaerbarkeit}.
+
+
+Sollen jedoch komplexe Lernverfahren wie zum Beispiel Neuronale Netze verwendet werden, müssen diese erklärt werden, um Verständnis zu erzeugen. Diese Erklärbarkeitsmethoden öffnen die Black Box der komplexen Funktionen und verweden dafür verschiedene Methoden \cite{GuidottiErklaerbarkeit}. 
+
+
+Bei dem Ansatz der Modell-Erklärung bleibt die eigentliche Funktion im Allgemeinen eine Black Box. Nach dem erfolgreichen Trainieren des komplexen Modells wird zusätzlich ein interpretierbarer Ansatz so trainiert, dass er die gleichen Ergebnisse wie die Black Box Funktion liefert. Anhand des weniger komplexen Modells kann so die Entscheidung für Menschen zugänglich und verständlich gemacht werden \cite{GuidottiErklaerbarkeit}.
+
+
+Wie gut solche Erklärungen sind lässt sich jedoch nicht immer trivial bestimmen \cite{RudinStopExplaining}. Oft sind zudem weitere Faktoren von Interesse, beispielsweise die Laufzeit oder der Speicherbedarf, wenn nur begrenzte Zeit oder Ressourcen zur Verfügung stehen. Des Weiteren ist das Verstehen von Erklärungen in vielen Fällen sehr subjektiv und kann sich von Person zu Person unterscheiden, auch wenn die eigentliche Erklärung unverändert bleibt \cite{MoellerKonstruktivismus}.
+
+
+Zudem können die einzelnen Teile eines Black Box Modells untersucht und die jeweiligen Auswirkungen auf eine Entscheidung erkennbar gemacht werden. Bei diesem Ansatz wird zwischen Methoden, die nur den In- und Output betrachten und solchen, die die gesamte Funktion einbeziehen unterschieden. Erstere erklären die Ausgabe eines komplexen Modells indem sie sowohl eine Vorhersage als auch eine dazugehörige Erklärung liefern und stellen somit eine Black Box Outcome Explanation bereit \cite{GuidottiErklaerbarkeit}.  
+
+Algorithmen, die nach dem Prinzip der Erklärung interner Vorgänge der Black Box aufgebaut sind, liefern Repräsentationen der Funktionalität des komplexeren Modells. Sie bilden eine Lösung für das Black Box Inspection Problems \cite{GuidottiErklaerbarkeit}.Somit werden Begründungen für getroffene Entscheidungen anhand der Veranschaulichung der Black Box Funktion selbst gegeben.  Bei diesen kann es sich zum Beispiel um Heat-Maps \Todo{Heatmap Erklärung raussuchen + Quellen}{} handeln.
+
+
+Insgesamt zeigt sich, dass es zwar viele verschiedene Erklärbarkeitsmethoden gibt, diese aber nur schwierig zu vergleichen sind. Daher scheint es praktisch, diesen direkten Vergleich zwischen verschiedenen Erklärungsarten für bestimmte Daten zu visualisieren.
+
+
+\section{Aufbau der Arbeit}
+\label{section: Aufbau}
+
+Im zweiten Kapitel werden zunächst die Zielsetzung sowie das allgemeine Vorgehen diskutiert und anschließend Grundlagen kurz aufgegriffen. Zu diesen Gehört der Aufbau eines neuronalen Netzes, das die Basis für diese Arbeit bildet, sowie die Erklärung des generellen Vorgehens beim Trainieren eines solchen Netzes anhand des Beipiels Backpropagation. Als letzter Punkt werden die Ansätze- Surrogatmodelle, Counterfactuals und Feature Contribution - denen die verwendeten Methoden angehören genauer beschrieben.
+
+Das dritte Kapitel beschäftigt sich mit den verwendeten Erklärbarkeitsmodellen im Speziellen. Dabei werden jeweils sowohl die verwendeten theoretischen Konzepte als auch die Umsetzung im Programmcode aufgegriffen und erläutert. 
+
+Das Design und die Umsetzung der interaktiven Benutzeroberfläche in Form einer Webseite bilden Kapitel vier. An dieser Stelle wird sowohl der Designprozess beschrieben als auch Einschränkungen und Alternativen erläutert sowie die verwendete Software und der selbst implementierte Code beschrieben.
+
+Als letztes werden die Ergebnisse der Arbeit zusammengefasst und ein Fazit gezogen. Hier werden vor allem Probleme und deren Behebung besonders beleuchtet. Des Weiteren findet eine Evaluierung der Praktikabilität und des Mehrwertes statt.
+
+\section{Ziel der Arbeit}
+\label{section: Ziel}
+Das Ziel dieser Arbeit ist es, einem Nutzer den direkten Vergleich verschiedener Erklärbarkeitsansätze zu ermöglichen. Es sollte einem Anwender somit möglich sein, mit der gewählten Oberfläche zu interagieren. Es sollte ihm möglich sein zu entscheiden, welche Erklärungen er für seinen individuellen Anwendungsfall als hilfreich empfindet. Dabei kann der Schwerpunkt auf der Erhöhung des Verständnisses und somit dem Vertrauen in eine Entscheidung liegen, er könnte jedoch ebenso auf einer besonders kurzen Laufzeit oder geringem Speicherverbrauch liegen. 
+
+Neben einer entsprechenden Visualisierung der Erklärung sollen somit auch Metadaten angezeigt werden. Der Nutzer sollte dabei einen Überblick über für ihn wichtige Informationen erhalten, diese ein- und ausblenden können sowie beliebig viele der vorhandenen Erklärbarkeitsmethoden wählen und anzeigen lassen können.
+Zudem soll die Auswahl verschiedener Datenpunkte möglich sein. Auf diese Weise soll die Oberfläche individuelle Bedürfnisse und Anforderungen abdecken können.
+
+
+Des Weiteren sollen die verwendeten Erklärbarkeitsmethoden verschiedenen Ansätzen angehören, gleichzeitig aber auch einen Vergleich innerhalb eines Ansatzes ermöglichen. Daher wurden sechs konkrete Algorithmen, je zwei pro Ansatz gewählt.
+
+
+Um eine Visualisierung zwecks eines Vergleichs verschiedener Erklärungsarten erstellen zu können wird zunächst ein Klassifizierer benötigt, dessen Entscheidungen erklärt werden können. Bei diesem handelt es sich um ein Neuronales Netz, das trainiert und für diese Arbeit bereitgestellt wird.
+
+
+Neben dem Netz werden zudem Implementierungen verschiedener Erklärbarkeitsansätze und die Erstellung einer Visualisierung in Form einer interaktiv verwendbaren Webseite benötigt. Hierbei werden die Methoden anhand der Verfügbarkeit passender Bibliotheken ausgewählt. Ein Algorithmus muss dabei folgende Kriterien erfüllen, um als passend eingestuft zu werden: Er sollte (hauptsächlich) in Python implementiert sein, der zu verwendende Programmcode sollte frei verfügbar sein und sollte Erklärungen für neuronale Netze, sowie bestenfalls eine Umwandlung in eine interpretierbare Repräsentation liefern. 
+
+
+\section{Vorgehen}
+\label{section: Vorgehen}
+Für diese Arbeit wird der Kreditdatensatz \cite{Referenz Datensatz Paper?} \footnote{Link zum Datensatz? sonst Verweis auf Anhang} \Todo{Datensatz raussuchen, Paper finden rausfinden wo und wie Referenzieren}{}, sowie ein darauf vortrainiertes Neuronales Netz\footnote{Link zum NN Code? sonst Verweis auf Anhang} \Todo{NN raussuchen, rausfinden wo und wie Referenzieren}{}.
+
+Alle folgenden Bezeichnungen werden in den jeweils referenzierten Kapitel im Detail mit der zugrundeliegenden Theorie, Berechnungen und der Implementierung erläutert. 
+
+Die verschiedenen Algorithmen, die implementiert werden , sind folgende: Für Surrogatmodelle wurde ein Entscheidungsbaum \cite{FrosstDecisionTree, BozDecisionTrees, ChenDecisionTrees} und ein lineares Modell mit einem Lasso-Klassifizierer \cite{ISLRBuchLinear}, für Counterfactuals ein Counterfactual-Modell \footnote{\url{https://fat-forensics.org/generated/fatf.transparency.predictions.counterfactuals.CounterfactualExplainer.html\#fatf.transparency.predictions.counterfactuals.CounterfactualExplainer}} \cite{SmithCounterfactuals, WachterCounterfactuals, GoyalCounterfactuals} und (DiCE)\cite{MothilalDiCE} und für den Feature-Contribution-Ansatz SHAP Deep Explainer \cite{LundbergSHAPDeepExplainer} und Layerwise Relevance Propagation (LRP) gewählt \cite{MontavonLRP, BachPixelwise}.
+
+Die sechs gewählten Erklärbarkeitsmethoden werden dabei wie folgt umgesetzt:
+\begin{itemize}
+	\item Entscheidungsbaum: ein Entscheidungsbaum wird auf Basis des sklearn DecisionTreeClassifiers \Todo{Referenz zum Paper und Code, Doku}{} implementiert. Zudem wird die Ausgabe des jeweiligen Pfades für einen bestimmten Datenpunkt umgesetzt, auf deren Basis anschließend eine Visualisierung erstellt werden kann.
+	
+	\item Lasso: ebenfalls auf Basis von sklearn wird Lasso \Todo{Referenz zum Paper und Code, Doku}{} eingebunden. Auch für diesen Ansatz wird eine Ausgabe in Form eines Barplots der Koeffizienten bestimmt, die über die Oberfläche visualisiert werden kann. 
+	
+	\item FAT-Forensics-Counterfactuals: der CounterfactualExplainer \Todo{Referenz zum Paper und Code, Doku}{} von FatForensics wird verwendet, um eine Counterfactual-Erklärung zu generieren. Diese kann über die entsprechende textualise-Methode\Todo{footnote zu Code, Doku}{} zu einer interpretierbaren Erklärung umgewandelt und für die Visualisierung verwendet werden.
+	
+	\item DiCE: \Todo{ordentlich formulieren}{}von DiCE Implementierung bereitgestellten Explainer nutzen 
+	außerdem bereitgestellte Mehtode für umwandeln in textuelle Ausgabe nutzen \Todo{Referenz zum Paper und Code, Doku}{}\Todo{richtig formulieren; nach implementationsversuchen}{}
+	
+	\item DeepSHAP: von DeepSHAP Implementierung bereitgestellten Explainer nutzen
+	außerdem bereitgestellte Mehtode für umwandeln in Text nutzen \Todo{Referenz zum Paper und Code, Doku}{}\Todo{richtig formulieren; nach implementationsversuchen}{}
+	
+	\item LRP: LRP selbst implementieren, erklärung als Text generieren, der die Beteiligung der einzelnen Feature angibt \Todo{Referenz zu Code, Tutorial}{}\Todo{richtig formulieren; nach implementationsversuchen}{}
+	
+\end{itemize}
+
+Für alle Algorithmen werden zudem die Metadaten Laufzeit (in O-Notation), Speicherbedarf und Genauigkeit bestimmt.
+
+Die interaktive Oberfläche wird mithilfe von Subplots realisiert und zeigt die Erklärbarkeitsmethoden, bietet dem Nutzer mehrere Möglichkeiten zu interagieren. Von den umgesetzten Erklärbarkeitsmethoden können beliebig viele ausgewählt und angezeigt werden. Ebenso ist es möglich die errechneten Metadaten zusätzlich oder einzeln für jede Methode einzublenden. Aus den Datenpunkten kann der Nutzer einen beliebigen auswählen und diesen detaillierter ansehen.

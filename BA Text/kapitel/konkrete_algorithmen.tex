@@ -1,0 +1,198 @@
+%kapitel3.tex
+\chapter{Erklärungen in der Praxis}
+\label{chapter: kap3}
+
+\section{Surrogatmodelle}
+\label{section: 3.Surrogat}
+
+\subsection{Entscheidungsbaum}
+\label{subsection: DT}
+Ein Entscheidungsbaum wird zu den leichter interpretierbaren Ansätzen \cite{InterpretableMLMolnar} gezählt. Somit kann für das Surrogatmodell ein Entscheidungsbaum verwendet werden. 
+
+Bei diesen handelt es sich um ein Modell, welches aus inneren Knoten, Blättern und diese verbindenden Zweigen besteht. Die Blätter enthalten konkrete Klassifizierungen, die inneren Knoten repräsentieren Verzweigungen, die bestimmte Abfragen (Tests \cite{RastogiDexicionTree}) enthalten. Anhand dieser Abfragen kann der entsprechende Zweig, eines zu klassifizierenden Datenpunktes, verfolgt werden \cite{RastogiDexicionTree}. Das Blatt der Pfades gibt die Klassifizierung an. Eine Erklärung für diese konkrete Entscheidung entspricht hierbei der Ausgabe des Pfades, den der zu erklärende Datenpunkt genommen hat \cite{NguyenDecisionTree}.
+
+Für diese Arbeit wird ein Entscheidungsbaum trainiert, der das Neuronale Netz approximiert und auf den Trainingsdaten die gleichen Klassifizierungen vornimmt, wie das Netz.
+
+\subsubsection{Theorie}
+\label{subsubsection: DT Theorie}
+Der implementierte Entscheidungsbaum nutzt den DecisionTreeClassifier und zugehörige Methoden von sklearn \Todo[Referenz, Doku, Code]{}.Dieser Classifier nutzt eine modifizierte Version des CART (Classification and regression trees) Algorithmus \Todo[Referenzen ml book etc]{} zur Erstellung der Entscheidungsbäume. Hierbei ist es möglich, mehrere Parameter individuell zu bestimmen. Beispielsweise ist eine Unterscheidung zwischen der Verwendung der Gini-Unreinheit oder Entropie als Maß der Unreinheit der einzelnen Knoten möglich.  \cite{}
+
+Im weiteren Verlauf gelten für die Beschreibung von Entscheidungsbäumen folgende Namenskonventionen:
+
+Knoten des Entscheidungsbaums werden mit $\mathbf{m}$ indiziert, Trainingsvektoren haben die Bezeichnung $\mathbf{x_i \in R^n}$ mit $i \in \{1,...,l\}$, $\mathbf{y \in R^l}$ beschreiben die zu $x_i$ zugehörigen Labelvektoren. \cite{}
+
+Ein Split bezeichnet das Aufteilen der Datenpunkte in einem Knoten in zwei Kind-Knoten. Hierfür muss ein Splitkandidat \begin{boldmath}$\theta(j, t_m)$\end{boldmath} mit Feature $\mathbf{j}$ und Threshold $\mathbf{t_m}$ für die entsprechende Eigenschaft in Knoten m gewählt werden. Für alle Datenpunkte in dem Knoten wird dann der Wert  des Features mit dem Threshold verglichen und so ein Split bestimmt. \cite{}
+
+$\mathbf{N_m} = |Q_m|$ bestimmt die Gesamtzahl aller Beispiele in der Menge $\mathbf{Q_m}$ in Knoten m. Die Subsets dieser Datenpunkte werden jeweils mit $\mathbf{Q_m^{left}} = \{(x,y)| x_i^j \leq t_m\}$ für diejenigen, die nicht größer als der gewählte Threshold an Knoten m sind, und $\mathbf{Q_m^{right}} = Q_m \backslash Q_m^{left} = \{(x,y)| x_i^j > t_m\}$ für die verbleibenden Datenpunkte, bezeichnet. Die Gesamtzahl der Feature in $Q_m^{left}$ und  $Q_m^{right}$ werden analog zur Bezeichnung von  $Q_m$ mit $N_m^{left} = |Q_m^{left}|$ und $N_m^{right} = |Q_m^{right}|$ 
+ \cite{}
+
+Eine Funktion $\mathbf{H(Q_m)}$ ist die Unreinheits- bzw. Loss-Funktion, mithilfe derer die Qualität \begin{boldmath}$G(Q_m, \theta)$ \end{boldmath} $= \frac{N_m^{left}}{N_m} H(Q_m^{left}(\theta)) + \frac{N_m^{right}}{N_m} H(Q_m^{right}(\theta))$ eines Splits bestimmt wird. \cite{}
+
+\begin{definition}
+	Gini-Unreinheit
+	\[H(Q_m)= \sum_k p_{mk} (1-p_{mk})\]
+	
+	Hierbei entspricht $\mathbf{p_{mk}}$ der Proportion der Observationen in Knoten m, die Klasse \textbf{k} angehören.
+	
+	\[p_{mk} = \frac{1}{N_m} \sum_{y \in Q_m} I(y=k)\]
+	
+	$I$ ist die Identitätsfunktion, die wie folgt definiert ist:
+	
+	\[I{y = k} = \begin{cases}
+		0 & \text{falls } y \neq k \\
+		1 & \text{falls } y = k
+	\end{cases}\]
+	
+\end{definition}
+
+\begin{definition}
+	Entropie
+	\[H(Q_m)= -\sum_k p_{mk} log(p_{mk})\]
+\end{definition}
+
+
+Der Algorithmus bestimmt dann mit einer der Unreinheitsfunktionen als Maß eine optimale Lösung, indem \[\theta^{\star} = argmin_{\theta} G (Q_m, \theta)\] rekursiv für $Q_m^{left}(\theta^{\star})$ und $Q_m^{right}(\theta^{\star})$ berechnet wird, bis die maximale Tiefe erreicht wurde. Auch diese Tiefe ist ein Parameter, der in sklearn der Funktion übergeben werden kann.  \cite{}
+
+\subsubsection{Code}
+\label{subsubsection: DT Code}
+
+\subsection{Lineare Modelle (Logistische Regression?)}
+\label{subsection: Lin}
+Ähnlich wie Entscheidungsbäume können auch lineare Modelle als Surrogat verwendet werden. Zur Erklärung des Black Box Algorithmus werden sie ebenfalls so trainiert, dass sie exakt die gleichen Klassifikationen bestimmen, wie das zu erklärende Modell.
+
+Um eine Ausgabe zu errechnen werden verschiedene Prädiktoren in eine (meist lineare) Gleichung der Form $Y = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + ... + \beta_p X_p + \epsilon$ verbunden. Y bestimmt die Klassifizierung und $\beta_j$ mit $j \in \{1,... p\}$ sind entsprechende Koeffizienten, die die Prädiktoren $X_j$ modifizieren. $\beta_0$ ist ein von den Prädiktoren unabhängiger Koeffizient. \cite{ISLRBuchLinear}
+
+Die einzelnen Prädiktoren des Modells können kombiniert und zu Polynomen verbunden werden. So ist es auch möglich, quadratische, kubische oder höhere polynomielle Funktionen in linearen Modellen umzusetzen. \cite{ISLRBuch} Anhand der erstellten Gleichung lassen sich durch die Koeffizienten die Gewichtungen der Feature oder Featurekombinationen, die die Prädikatoren bilden, ablesen. \cite{ISLRBuch} Diese Gewichtungen können beispielsweise durch ein Balkendiagramm visualisiert werden.
+
+Um eine gute Interpretierbarkeit zu gewählrleisten sollten sowohl die Anzahl verwendeten Feature als auch die Anzahl der Kombinationen und somit der Höhe des Funktionsgrades möglichst gering gehalten werden. \cite{ISLRBuch, RudinStopExplaining}
+
+
+\subsubsection{Theorie}
+\label{subsubsection: Lin Theorie}
+Für die Umsetzung eines linearen Modells wird Logistische Regression zur Klassifizierung verwendet. Auch für diese Umsetzung bilden die vorhandenen sklearn Implementierungen die Grundlage.
+
+\subsubsection{Code}
+\label{subsubsection: Lin Code}
+
+
+\section{Counterfactuals}
+\label{section: 3.Counterfactuals}
+
+\subsection{Fat Forensics Counterfactuals}
+\label{subsection: Fat-f CF}
+\Todo[CF umschreiben!]{}
+Counterfactuals bieten dem Nutzer textuelle, beispielhafte Angaben zur Auswirkung bestimmter Merkmale. Sie beschreiben nach gewissen Kriterien minimale Änderungen, die zu einer anderen Klassifizierung führen würden und stellen somit nächste mögliche Welten dar, in denen eine Entscheidung anders ausgefallen wäre. \cite{WachterCounterfactuals} Sie geben somit eine Erklärung für eine Klassifizierung an und können ein hilfreiches Werkzeug sein, um schlechte Trainingsdaten, die einen gewissen Bias haben, zu erkennen. \cite{WachterCounterfactuals}
+
+Für diese Arbeit werden Counterfactuals verwendet, um nächste mögliche Welten als Erklärungen für Klassifizierungen anzugeben.
+
+Für die Verwendung von Counterfactuals als Erklärung kann die Implementierung von FAT Forensics genutzt werden. \cite{SokolFatForensics} \footnote{\url{https://fat-forensics.org/generated/fatf.transparency.predictions.counterfactuals.CounterfactualExplainer.html\#fatf.transparency.predictions.counterfactuals.CounterfactualExplainer}} \footnote{\url{https://github.com/fat-forensics/fat-forensics}} Diese stellt Funktionen zur Errechnung und zu textuellen Ausgabe der bestimmten Counterfactuals bereit. So können dem Nutzer passende Erklärungen generiert und präsentiert werden. 
+
+
+\subsubsection{Theorie}
+\label{subsubsection: CF Theorie}
+
+\subsubsection{Code}
+\label{subsubsection: CF Code}
+
+\subsection{DiCE}
+\label{subsection: Dice}
+\Todo[Dice umschreiben!]
+DiCE (Diverse Counterfactual Explanations) ist ein Ansatz, der darauf fokussiert ist, möglichst diverse Counterfactuals zu erzeugen, die trotzdem möglichst genau lokale Entscheidungsgrenzen bestimmen. \cite{MothilalDiCE} Um dies zu erreichen wird neben der Diversität auch die Nähe zum Input in das Optimierungsproblem mit einbegriffen.
+
+
+Der größte Unterschied zur Generierung einfacher Counterfactuals ergibt sich aus der Erstellung einer Menge von möglichen Erklärungen \cite{MothilalDiCE}, statt nur einer einzigen. \cite{MahajanDiCe} So kann die Diversität für das Set sichergestellt und optimiert werden. \cite{MothilalDiCE}
+
+
+Für die Implementierung von DiCE wird eine zu den Papern \cite{MothilalDiCE, MahajanDiCe} zugehörige Bibliothek von verwendet.\footnote{\url{https://github.com/interpretml/dice}} Diese stellt den benötigten Sourcecode bereit und kann ebenfalls auf neuronalen Netzen verwendet werden.
+
+
+\subsubsection{Theorie}
+\label{subsubsection: Dice Theorie}
+
+\subsubsection{Code}
+\label{subsubsection: Dice Code}
+
+
+\section{Feature Contribution}
+\label{section: 3.Feature Contribution}
+
+\subsection{DeepSHAP}
+\label{subsection: DeepSHAP}
+\Todo[DeepSHAP bissl umschreiben!]	
+Bei dem SHAP (SHapley Additive exPlanations) Deep Explainer handelt es sich um einer abgewandelte und modifizierte Version des DeepLIFT Algorithmus. \footnote{\url{https://shap.readthedocs.io/en/latest/generated/shap.DeepExplainer.html\#shap.DeepExplainer}} 
+
+DeepLIFT erklärt die Beteiligung einzelner Neuronen, gemessen an ihren Inputs. Um diesen Wert errechnen zu können werden für jeden Knoten Attributregeln aufgestellt, die sich aus der Aktivierung auf dem Referenzinput ergeben. Mithilfe dieser Regeln und der Verbindung mit der sogenannten Kettenregel für Multiplizierer \cite{ShrikumarSHAPDeepExplainer} lassen sich die Beteiligungen mittels Backpropagation bestimmen. \cite{ShrikumarSHAPDeepExplainer}
+
+
+Diese Berechnungen lassen sich deutlich beschleuningen, wenn nur Annäherungen von Shapley Values für die DeepLIFT Attribut-Regeln bestimmt werden. Der Deep Explainer nutzt aus, dass diese Approximation aus den DeepLIFT-Regeln errechnet werden kann. Die für jeden Knoten bestimmten Attribut-Regeln können dabei so gewählt werden, dass sie eine Abschätzung bilden. Durch das Integrieren über viele Hintergrundbeispiele wird eine Annäherung ermittelt, sodass die Summe der SHAP Values die Differenz zwischen dem erwarteten ($E(f(x))$)und dem aktuellen ($f(x)$) Output des Modells ergeben: $f(x)-E(f(x))$. \cite{LundbergSHAPDeepExplainer} 
+
+
+Shapley Values sind ein Lösungskonzept, das Shapley für die Game Theory entwickelt hat. Bei diesem werden alle Feature als \glqq Spieler\grqq, die Vorhersagen oder Klassifizierungen als \glqq Gewinn\grqq angesehen. Aus dem Zusammenspiel der einzelnen Variablen kann dann die Beteiligung am Output errechnet und somit eine Erklärung für Klassifizierungen bestimmt werden. \cite{ShapleyValMolnar} Dabei stellt die Berechnug der Shapley Values ein NP-vollständiges Problem dar, das durch die Verwendung von Approximationen der eigentlichen Values polinomiell und somit effizient lösbar wird. \cite{CastroShapley}
+
+
+Für die Umsetzung von Deep Explainer kann die SHAP Bibliothek verwendet werden. \footnote{\url{https://shap.readthedocs.io/en/latest/index.html}} Diese stellt die Impementation eines Algorithmus bereit, der SHAP auf neuronalen Netzen anwendet und der für die Erklärung von Klassifizierungen genutzt werden kann. \footnote{\url{https://shap.readthedocs.io/en/latest/generated/shap.DeepExplainer.html}}
+
+\subsubsection{Theorie}
+\label{subsubsection: Feature Contribution Theorie}
+
+\subsubsection{Code}
+\label{subsubsection: Feature Contribution Code}
+
+\subsection{LRP}
+\label{subsection: LRP}
+\Todo[LRP umschreiben!]
+Bei LRP handelt es sich um einen Algorithmus, der Neuronales Netz rückwärts, also entgegen der Lern- und Klassifizierungsrichtung durchläuft und anhand von gelernten Gewichten und Aktivierungsfunktionen eine Erklärung des Inputs erzeugt. Für Bilddaten ist dies die Erstellung einer Heatmap, die farblich kennzeichnet, welche Wichtigkeit bestimmte Pixel für die Klassifizierung hatten. Dies entspricht der allgemeinen Grundidee der Feature Importance zur Erklärung, Gewichte pro Eingabedimension auszugeben. Diese Gewichte geben für jeden konkreten Datenpunkt an, wie stark die entsprechende Belegung für bzw. gegen die Entscheidung des Modells spricht. \cite{MontavonLRP} \footnote{\url{http://heatmapping.org/tutorial/}}
+
+LRP wird anhand eines Tutorials selbst implementiert. Bei diesem handelt es sich um das zum Paper \cite{MontavonLRP} Zugehörige, in dem der notwendige Code erläutert wird.
+
+\subsubsection{Theorie}
+\label{subsubsection: LRP Theorie}
+
+
+Für die Verwendung von LRP werden im Folgenden Relevanzneuronen erstellt und alle Relevanzwerte entgegen der Lernrichtung durch das Netz propagiert. Diese Relevanzneuronen sind mit $R_k$ bezeichnet und repräsentieren in der Output-Schicht zunächst den tatsächlichen Neuronen-Output $a_k$. \cite{MONTAVON20181}
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}[scale=2, every edge/.style={draw=black,thick, arrows = -{Stealth}}]
+		% Knoten
+		\node (00) at (0.5,2.5) [circle,draw, scale = 2] {};
+		\node (01) at (0.5,1.5) [circle,draw, scale = 2] {};
+		\node (02) at (0.5,0.5) [circle,draw, scale = 2] {};
+		
+		\node (11) at (1.5,1) [circle,draw, scale=2] {};
+		\node (10) at (1.5,2) [circle,draw, label=above:{$a_j$}] {$R_j$};
+		
+		\node (20) at (2.5,0.5) [circle,draw, scale = 2] {};
+		\node (21) at (2.5,1.5) [circle,draw, label=above:{$a_k$}] {$R_k$};
+		\node (22) at (2.5,2.5) [circle,draw, scale=2] {};
+		
+		% Kanten
+		% 	\draw (00.east) edge node {} (10.west);
+		\draw (00.east) edge node {} (11.west);
+		% 	\draw (01.east) edge node {} (10.west);
+		\draw (01.east) edge node {} (11.west);
+		% 	\draw (02.east) edge node {} (10.west);
+		\draw (02.east) edge node {} (11.west);
+		\draw (10.east) edge node {} (20.west);
+		% 	\draw (10.east) edge node {} (21.west);
+		\draw (10.east) edge node {} (22.west);
+		\draw (11.east) edge node {} (20.west);
+		\draw (11.east) edge node {} (21.west);
+		\draw (11.east) edge node {} (22.west);
+		
+		\draw (21.west) edge[above right] node {\footnotesize \textbf{$R_{j \leftarrow k}$}} (10.east);
+		
+		\draw (00.east) edge [above, draw] node {\footnotesize \textbf{$w_{j_1k}$}} (10.west);
+		\draw (01.east) edge [left] node {\footnotesize \textbf{$w_{j_2k}$}} (10.west);
+		\draw (02.east) edge [below left] node {\footnotesize \textbf{$w_{j_0k}$}} (10.west);
+	\end{tikzpicture}
+\end{figure}
+
+
+
+\subsubsection{Code}
+\label{subsubsection: LRP Code}
+
+\section{Taxanomie}
+\label{section: Metadaten}
+Metadaten sammeln

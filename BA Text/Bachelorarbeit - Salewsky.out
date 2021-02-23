@@ -1,0 +1,35 @@
+\BOOKMARK [0][]{chapter.2}{1 Einleitung}{}% 1
+\BOOKMARK [1][]{section.3}{1.1 Motivation und Hintergrund}{chapter.2}% 2
+\BOOKMARK [1][]{section.7}{1.2 Aufbau der Arbeit}{chapter.2}% 3
+\BOOKMARK [1][]{section.8}{1.3 Ziel der Arbeit}{chapter.2}% 4
+\BOOKMARK [1][]{section.9}{1.4 Vorgehen}{chapter.2}% 5
+\BOOKMARK [0][]{chapter.26}{2 Grundlagen}{}% 6
+\BOOKMARK [1][]{section.27}{2.1 Machine Learnings Grundbegriffe}{chapter.26}% 7
+\BOOKMARK [1][]{section.42}{2.2 Aufbau Neuronaler Netze}{chapter.26}% 8
+\BOOKMARK [1][]{section.54}{2.3 Der Lernprozess Neuronaler Netzwerke}{chapter.26}% 9
+\BOOKMARK [2][]{subsection.58}{2.3.1 Backpropagation}{section.54}% 10
+\BOOKMARK [1][]{section.67}{2.4 Das gegebene Neuronale Netz}{chapter.26}% 11
+\BOOKMARK [1][]{section.68}{2.5 Ans\344tze}{chapter.26}% 12
+\BOOKMARK [2][]{subsection.69}{2.5.1 Surrogatmodelle}{section.68}% 13
+\BOOKMARK [2][]{subsection.71}{2.5.2 Counterfactuals}{section.68}% 14
+\BOOKMARK [2][]{subsection.72}{2.5.3 Feature Contribution}{section.68}% 15
+\BOOKMARK [0][]{chapter.77}{3 Erkl\344rungen in der Praxis}{}% 16
+\BOOKMARK [1][]{section.78}{3.1 Surrogatmodelle}{chapter.77}% 17
+\BOOKMARK [2][]{subsection.79}{3.1.1 Entscheidungsbaum}{section.78}% 18
+\BOOKMARK [2][]{subsection.86}{3.1.2 Lineare Modelle \(Logistische Regression?\)}{section.78}% 19
+\BOOKMARK [1][]{section.89}{3.2 Counterfactuals}{chapter.77}% 20
+\BOOKMARK [2][]{subsection.90}{3.2.1 Fat Forensics Counterfactuals}{section.89}% 21
+\BOOKMARK [2][]{subsection.96}{3.2.2 DiCE}{section.89}% 22
+\BOOKMARK [1][]{section.101}{3.3 Feature Contribution}{chapter.77}% 23
+\BOOKMARK [2][]{subsection.102}{3.3.1 DeepSHAP}{section.101}% 24
+\BOOKMARK [2][]{subsection.109}{3.3.2 LRP}{section.101}% 25
+\BOOKMARK [1][]{section.115}{3.4 Taxanomie}{chapter.77}% 26
+\BOOKMARK [0][]{chapter.116}{4 Webpage}{}% 27
+\BOOKMARK [0][]{chapter.117}{5 Ergebnisse}{}% 28
+\BOOKMARK [1][]{section.118}{5.1 }{chapter.117}% 29
+\BOOKMARK [1][]{section.119}{5.2 Todos}{chapter.117}% 30
+\BOOKMARK [0][]{appendix.160}{A Weitere Informationen}{}% 31
+\BOOKMARK [0][]{appendix*.161}{Abbildungsverzeichnis}{}% 32
+\BOOKMARK [0][]{appendix*.162}{Algorithmenverzeichnis}{}% 33
+\BOOKMARK [0][]{appendix*.163}{Literaturverzeichnis}{}% 34
+\BOOKMARK [0][]{appendix*.163}{Erkl\344rung}{}% 35
