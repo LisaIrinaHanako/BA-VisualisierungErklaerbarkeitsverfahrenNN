@@ -4,7 +4,7 @@ import torch
 import matplotlib.pyplot as plt
 import helper_methods as helper
 from sklearn import tree
-from sklearn.linear_model import Lasso
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 from interactive_ba_preparation_master.model import load_model
 from interactive_ba_preparation_master.dataset import German_Credit
@@ -13,63 +13,79 @@ from interactive_ba_preparation_master.dataset import German_Credit
 clf = load_model(path="./interactive_ba_preparation_master/net.pth")
 ds = German_Credit(path="./interactive_ba_preparation_master/german.data")
 
-# Function to calculate DecisionTreeClassifier
+# Function to calculate LogisticRegression
 def calc_classifier(x_train, x_test, y_train, y_test,
-                    alpha, fit_intercept, normalize, 
-                    precompute, copy_X, max_iter, 
-                    tol, warm_start, positive, 
-                    random_state, selection):
+                    penalty='l2', dual=False, tol=0.0001, 
+                    C=1.0, fit_intercept=True, intercept_scaling=1, 
+                    class_weight=None, random_state=None, solver='lbfgs', 
+                    max_iter=100, multi_class='auto', verbose=0, 
+                    warm_start=False, n_jobs=None, l1_ratio=None):
     
-    classifier = Lasso(alpha = alpha, fit_intercept = fit_intercept, normalize = normalize, 
-                    precompute = precompute, copy_X=copy_X, max_iter=max_iter, 
-                    tol=tol, warm_start=warm_start, positive = positive, 
-                    random_state = random_state, selection=selection) 
+    classifier = LogisticRegression(penalty = penalty, dual = dual, tol = tol, 
+                    C = C, fit_intercept=fit_intercept, intercept_scaling=intercept_scaling, 
+                    class_weight=class_weight, random_state=random_state, solver = solver, 
+                    max_iter = max_iter, multi_class=multi_class, verbose=verbose,
+                    warm_start=warm_start, n_jobs=n_jobs,l1_ratio=l1_ratio) 
     # Performing classification 
     classifier.fit(x_train, y_train) 
     return classifier 
 
+# Funktion um Koeffizienten und Onehot-Spaltennamen (mit einzelnen num. Feature Werten) zu holen
+def get_columns_and_coeff():
+    classifier, predictions = get_classifier_and_predictions()
+    return ds.cols_onehot, classifier.coef_
+
+# Funktion um Classifier und Predictions zu bestimmen
+def get_classifier_and_predictions():
+    
+    penalty='l2'
+    dual=False
+    tol=0.0001 
+    C=1.0
+    fit_intercept=True
+    intercept_scaling=1 
+    class_weight=None
+    random_state=None
+    solver='lbfgs' 
+    max_iter=100
+    multi_class='auto'
+    verbose=0 
+    warm_start=False
+    n_jobs=None
+    l1_ratio=None
+    
+    x_test, y_test, x_train, y_train, y_net_test, y_net_train = helper.get_samples_and_labels(ds, clf)
+    
+    # calculate actual classifier result
+    classifier = calc_classifier(x_train, x_test, y_net_train, y_net_test,
+                    penalty, dual, tol, 
+                    C, fit_intercept, intercept_scaling, 
+                    class_weight, random_state, solver, 
+                    max_iter, multi_class, verbose, 
+                    warm_start, n_jobs, l1_ratio)
+    predictions = classifier.predict(x_test)
+    return classifier, predictions
 
 
 def main():
 
-    avg = 0
-    alpha=1.0,
-    fit_intercept=True
-    normalize=False
-    precompute=False 
-    copy_X=True
-    max_iter=1000 
-    tol=0.0001
-    warm_start=False
-    positive=False
-    random_state=None 
-    selection='cyclic'
-
-    
     # get trianing and test tensors and net trained labels
     x_test, y_test, x_train, y_train, y_net_test, y_net_train = helper.get_samples_and_labels(ds, clf)
     
-    # calculate actual classifier result
-    classifier = calc_classifier(x_train, x_test, y_train, y_test,
-                    alpha, fit_intercept, normalize, 
-                    precompute, copy_X, max_iter, 
-                    tol, warm_start, positive, 
-                    random_state, selection)
-    predictions = classifier.predict(x_test)
+    # get predictions 
+    classifier, predictions = get_classifier_and_predictions()
     
-    print(predictions)
-    print(y_test)
     # calculate accuracy
-    acc = accuracy_score(predictions, y_test)
+    avg = 0    
+    acc = accuracy_score(predictions, y_net_test)
     avg = avg + acc
     
     # print accuracy average for specified parameters
-    print("Accuracy of {} for Lasso".format
-                            (avg / 20 * 100))
+    print("Accuracy of {} for Logistic Regression".format
+                            (avg * 100))# / 20 * 100))
     print("\n", "-"*80, "\n")
 
-    helper.print_prediction(x_test, clf)
-
+    # print(get_columns_and_coeff())
 
 # Calling main function 
 if __name__=="__main__": 
