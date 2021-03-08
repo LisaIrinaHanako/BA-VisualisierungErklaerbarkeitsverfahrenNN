@@ -5,12 +5,17 @@ from igraph import Graph, EdgeSeq
 # import cufflinks as cfl
 # import plotly.express as px
 # %matplotlib inline
+import dash
+from dash.dependencies import Input, Output
+import dash_table
+import dash_core_components as dcc
+import dash_html_components as html
 
 import decision_tree as dt
 import linear_model as lin
 import counterfactuals as cf
 import dice
-import deep_shap as ds
+import deep_shap as deeps
 import lrp
 import helper_methods as helper
 
@@ -28,6 +33,7 @@ from interactive_ba_preparation_master.dataset import German_Credit
 # Get pretrained PyTorch model and dataset
 clf = load_model(path="./interactive_ba_preparation_master/net.pth")
 ds = German_Credit(path="./interactive_ba_preparation_master/german.data")
+app = dash.Dash()
 
 
 def show_decision_tree_path(datapoint_index = 0):
@@ -357,11 +363,40 @@ def show_linear_model_both_in_one():
 def show_counterfactual_explanation():
     print("CF Text: nothing here yet")
 
-def show_DiCE_visualization():
-    print("DiCE: nothing here yet")
+def show_DiCE_visualization(sample_id=0):
+    x_test, y_test, x_train, y_train, y_net_test, y_net_train = helper.get_samples_and_labels(ds, clf)
+    
+    classifier = dice.get_counterfactual_explainer()
+    predictions = dice.get_counterfactual_explanation(x_test, classifier)
+    cfs = dice.get_cfs_df(predictions, x_test, y_test, sample_id)
+    print(cfs)
+    print(x_test[sample_id])
+    app.layout = html.Div([
+        dash_table.DataTable(
+            id='dt', 
+            columns=[
+                {"name": i, "id": i, "deletable":True, "selectable":True, "hideable":True}
+                for i in cfs.columns
+            ],
+            data=cfs.to_dict('records')),
+        html.Br(),
+        html.Br(),
+        html.Div(html.H2("Überschrift")),
+        html.Div(id='')
+    ])
+    # fig = go.Table(header=dict(values=))
 
-def show_DeepSHAP_visualization():
-    print("DeepSHAP: nothing here yet")
+def show_DeepSHAP_visualization(sample_id=0):
+    # get trianing and test tensors and net trained labels
+    x_test, y_test, x_train, y_train, y_net_test, y_net_train = helper.get_samples_and_labels(ds, clf)
+    
+    # get predictions 
+    classifier = deeps.get_shap_deep_explainer(x_train)
+    shap_explanation = deeps.get_shap_explanation(x_test, classifier)
+    print(shap_explanation[0][sample_id].shape)
+    plot_class_0 = go.Bar(x = ds.cols_onehot, y = shap_explanation[0][sample_id], name = "SHAP 0")
+    plot_class_1 = go.Bar(x = ds.cols_onehot, y = shap_explanation[1][sample_id], name = "SHAP 1")
+    return plot_class_0, plot_class_1
 
 def show_lrp_visualization():
     print("LRP: nothing here yet")
@@ -380,7 +415,7 @@ def show_all_plots_interactive():
     lm_both_fig_single, lm_both_fig_whole = show_whole_and_specific_linear_model_plot_no_zeros()
     # fat_f_cf_fig = show_counterfactual_explanation()
     # dice_fig = show_DiCE_visualization()
-    # shap_fig = show_DeepSHAP_visualization()
+    shap_fig_0, shap_fig_1 = show_DeepSHAP_visualization()
     # lrp_fig = show_lrp_visualization()
 
     fig = make_subplots(rows=2, cols=3, 
@@ -395,8 +430,11 @@ def show_all_plots_interactive():
     fig.add_trace(lm_both_fig_whole, row=1, col=2)
     fig.add_trace(dt_edges, row=1, col=3)
     fig.add_trace(dt_nodes, row=2, col=1)
-    fig.add_trace(lm_both_fig_single, row=2, col=2)
+    # fig.add_trace(lm_both_fig_single, row=2, col=2)
     fig.add_trace(lm_both_fig_whole, row=2, col=3)
+
+    fig.add_trace(shap_fig_0, row=2, col=2)
+    fig.add_trace(shap_fig_1, row=2, col=2)
     
     fig.update_layout(legend_title_text = "")
     fig.update_xaxes(title_text="Feature")
@@ -429,7 +467,10 @@ def main():
     # ds.main()
     # lrp.main()
     # show_all_plots_interactive()
-    show_dt_lm()
+    # show_dt_lm()
+    show_DiCE_visualization()
+    print("run server")
+    app.run_server()
     
 
 # Calling main function 
