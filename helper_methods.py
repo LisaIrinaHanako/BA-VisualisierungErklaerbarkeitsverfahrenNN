@@ -54,7 +54,7 @@ def get_feature_labels(ds, number_of_features):
 
 # Function to inverse transform preprocessing of numerical features
 # TODO: die kann noch nix
-def inverse_preprocessing(ds, datapoint, sample_id):
+def inverse_preprocessing(ds, datapoint, sample_id = 0):
     transformer = ds.transformer
     scaler = transformer.named_transformers_['num']
     ohe = transformer.named_transformers_['ohe']
@@ -64,7 +64,7 @@ def inverse_preprocessing(ds, datapoint, sample_id):
 
     inversed_num = scaler.inverse_transform(num_features)
     inversed_cat = ohe.inverse_transform(cat_features.reshape(1, -1) )
-    return inversed_num, inversed_cat
+    return inversed_num, inversed_cat[0]
     
 
 # Function to make and print predictions for given datapoints and classifier
