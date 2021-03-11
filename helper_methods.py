@@ -53,7 +53,6 @@ def get_feature_labels(ds, number_of_features):
 
 
 # Function to inverse transform preprocessing of numerical features
-# TODO: die kann noch nix
 def inverse_preprocessing(ds, datapoint, sample_id = 0):
     transformer = ds.transformer
     scaler = transformer.named_transformers_['num']
@@ -66,6 +65,30 @@ def inverse_preprocessing(ds, datapoint, sample_id = 0):
     inversed_cat = ohe.inverse_transform(cat_features.reshape(1, -1) )
     return inversed_num, inversed_cat[0]
     
+def inverse_preprocessing_single(ds, datapoint):
+    transformer = ds.transformer
+    scaler = transformer.named_transformers_['num']
+    ohe = transformer.named_transformers_['ohe']
+    features = datapoint
+    num_features = features[0:len(ds.numerical_variables)]
+    cat_features = features[len(num_features):]
+
+    inversed_num = scaler.inverse_transform(num_features)
+    inversed_cat = ohe.inverse_transform(cat_features.reshape(1, -1) )
+    return inversed_num, inversed_cat[0]
+
+# Helper function to get categorical indices
+def get_categorical_idx(ds):
+    all_categories = ds.column_names[: len(ds.column_names)]
+    categorical_vars = ds.categorical_variables
+    max_length = len(categorical_vars)
+    categorical_idx = []
+    for i, cat in enumerate(all_categories):
+        if(i >= max_length):
+            break
+        if(categorical_vars[i] == cat):
+            categorical_idx = categorical_idx.append(i)
+    return categorical_idx
 
 # Function to make and print predictions for given datapoints and classifier
 def print_prediction(datapoint, clf_object): 
