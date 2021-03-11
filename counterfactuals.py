@@ -10,23 +10,11 @@ from interactive_ba_preparation_master.dataset import German_Credit
 clf = load_model(path="./interactive_ba_preparation_master/net.pth")
 ds = German_Credit(path="./interactive_ba_preparation_master/german.data")
 
-# Helper function to get categorical indices
-def get_categorical_idx():
-    all_categories = ds.column_names[: len(ds.column_names)]
-    categorical_vars = ds.categorical_variables
-    max_length = len(categorical_vars)
-    categorical_idx = []
-    for i, cat in enumerate(all_categories):
-        if(i >= max_length):
-            break
-        if(categorical_vars[i] == cat):
-            categorical_idx = categorical_idx.append(i)
-    return categorical_idx
 
 # Function to get a Counterfactual Explainer
 def get_counterfactual_explainer(dataset_to_use):
-    cat_idx_list = get_categorical_idx()
-    
+    cat_idx_list = helper.get_categorical_idx(ds)
+    print(type(clf.predict))
     explainer = fatf_cf.CounterfactualExplainer(predictive_function = clf.predict,
                                                 dataset = dataset_to_use,
                                                 categorical_indices=cat_idx_list)
@@ -112,8 +100,8 @@ def main():
         [classes[i] for i in dp_cfs_predictions])
 
     # print and textualise counterfactual explanations
-    print_CF(dp_cfs, dp_cfs_distances, dp_cfs_predictions, dp_cfs_predictions_names)
-    textualise(x_test_set[dp_index, : ], dp_cfs, y_test_set[dp_index].item(), dp_cfs_distances, dp_cfs_predictions)
+    # print_CF(dp_cfs, dp_cfs_distances, dp_cfs_predictions, dp_cfs_predictions_names)
+    # textualise(x_test_set[dp_index, : ], dp_cfs, y_test_set[dp_index].item(), dp_cfs_distances, dp_cfs_predictions)
 
     
 # Calling main function 
