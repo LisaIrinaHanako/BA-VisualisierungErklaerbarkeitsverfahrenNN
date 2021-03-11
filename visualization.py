@@ -8,12 +8,14 @@ from igraph import Graph, EdgeSeq
 import dash
 from dash.dependencies import Input, Output
 import dash_table
+
 import dash_core_components as dcc
 import dash_html_components as html
 
 import decision_tree as dt
 import linear_model as lin
 import counterfactuals as cf
+import in_sample_counterfactuals as inscf
 import dice
 import deep_shap as deeps
 import lrp
@@ -36,10 +38,11 @@ ds = German_Credit(path="./interactive_ba_preparation_master/german.data")
 app = dash.Dash()
 
 
+x_test, y_test, x_train, y_train, y_net_test, y_net_train = helper.get_samples_and_labels(ds, clf)
+x_train_set, y_train_set, x_test_set, y_test_set = ds.numpy()
+
+
 def show_decision_tree_path(datapoint_index = 0):
-    print("DT Path: nothing here yet")
-    x_test, y_test, x_train, y_train, y_net_test, y_net_train = helper.get_samples_and_labels(ds, clf)
-    
     classifier = dt.get_classifier()
     predictions = classifier.predict(x_test)
     
@@ -256,7 +259,6 @@ def make_annotations(labels, position, font_size=10, font_color='rgb(10,40,87)')
 def linear_model_whole_get_xy():
     lin_cols, lin_coeffs = lin.get_columns_and_coeff()
 
-    x_train_set, y_train_set, x_test_set, y_test_set = ds.numpy()
     x_test_set = helper.reshape(x_test_set)
     # since lin_coeffs is array of shape (1,61): use only dimension 1
     return lin_cols, lin_coeffs[0]
@@ -266,7 +268,6 @@ def linear_model_whole_get_xy():
 def linear_model_single_datapoint_get_xy(datapoint_index = 0):
     lin_cols, lin_coeffs = lin.get_columns_and_coeff()
 
-    x_train_set, y_train_set, x_test_set, y_test_set = ds.numpy()
     x_test_set = helper.reshape(x_test_set)
     
     print(ds.data.iloc[datapoint_index])
@@ -349,47 +350,36 @@ def show_linear_model_both_in_one():
             newX.append(singleX[i])
             newSingleY.append(singleY[i])
             newWholeY.append(wholeY[i])
-
-    fig.add_trace(go.Bar(x=newX, y=newSingleY, name = "Einzelner Datenpunkt"), row=1, col=3)
-    fig.add_trace(go.Bar(x=newX, y=newWholeY, name = "Ganzes Modell"), row=1, col=3)
+    single_dp_go = go.Bar(x=newX, y=newSingleY, name = "Einzelner Datenpunkt")
+    whole_go = go.Bar(x=newX, y=newWholeY, name = "Ganzes Modell")
+    fig.add_trace(single_dp_go, row=1, col=3)
+    fig.add_trace(whole_go, row=1, col=3)
     
     fig.update_layout(legend_title_text = "")
     fig.update_xaxes(title_text="Feature")
     fig.update_yaxes(title_text="Relevanz")
     # plot(fig)
-    return fig
+    # return fig
+    return single_dp_go, whole_go
 
 
-def show_counterfactual_explanation():
-    print("CF Text: nothing here yet")
+def show_counterfactual_explanation(sample_id=0):
+    classifier, neigh_dist, neigh_ind = inscf.get_classifier_and_predictions()
+    actual_cf, min_dist = inscf.get_cf_min_dist(neigh_dist, neigh_ind, x_test, y_test, x_train, y_train)
+    counterfactuals = inscf.get_cfs_df(actual_cf,x_test,y_test)
+
+    return counterfactuals
 
 def show_DiCE_visualization(sample_id=0):
-    x_test, y_test, x_train, y_train, y_net_test, y_net_train = helper.get_samples_and_labels(ds, clf)
-    
     classifier = dice.get_counterfactual_explainer()
     predictions = dice.get_counterfactual_explanation(x_test, classifier)
     cfs = dice.get_cfs_df(predictions, x_test, y_test, sample_id)
     print(cfs)
     print(x_test[sample_id])
-    app.layout = html.Div([
-        dash_table.DataTable(
-            id='dt', 
-            columns=[
-                {"name": i, "id": i, "deletable":True, "selectable":True, "hideable":True}
-                for i in cfs.columns
-            ],
-            data=cfs.to_dict('records')),
-        html.Br(),
-        html.Br(),
-        html.Div(html.H2("Überschrift")),
-        html.Div(id='')
-    ])
     # fig = go.Table(header=dict(values=))
+    return cfs
 
 def show_DeepSHAP_visualization(sample_id=0):
-    # get trianing and test tensors and net trained labels
-    x_test, y_test, x_train, y_train, y_net_test, y_net_train = helper.get_samples_and_labels(ds, clf)
-    
     # get predictions 
     classifier = deeps.get_shap_deep_explainer(x_train)
     shap_explanation = deeps.get_shap_explanation(x_test, classifier)
@@ -398,8 +388,24 @@ def show_DeepSHAP_visualization(sample_id=0):
     plot_class_1 = go.Bar(x = ds.cols_onehot, y = shap_explanation[1][sample_id], name = "SHAP 1")
     return plot_class_0, plot_class_1
 
-def show_lrp_visualization():
-    print("LRP: nothing here yet")
+def show_lrp_visualization(layer=0, sample_id=0):
+    L, layers, A = lrp.forward(x_test, y_test)
+    A, R = lrp.lrp_backward(L, layers, A)
+
+    singleX = ds.cols_onehot
+    relevances = []
+    
+    newX = []
+    newY = [] 
+    data = ten.numpy().tolist()[layer]
+    for i in len(data):
+        if data[i] > 0:
+            newX.append(singleX[i])
+            newY.append(data[i])
+
+    relevances = go.Bar(x=newX, y=data, name = "Layer {no}".format(no=layer))
+
+    return relevances
 
 def show_all_plots_interactive():
     # show_decision_tree_path()
@@ -459,6 +465,77 @@ def show_dt_lm():
     
     plot(fig)
 
+def dash_layout():
+    selected_dp = get_selected_datapoint
+    app.layout = html.Div([
+        html.Div(html.H2("Visualisierungen")),
+        html.Br(),
+        html.Div(dcc.Dropdown(
+            id='datapoint_selection_dropdown',
+            mulit=False,
+            clearable=True,
+            options=[{"label":"Datenpunkt {dp}".format(dp=helper.get_id_for_dp(c)), "value":c}
+                    for c in x_test]
+        )),
+        dash_table.DataTable(
+            id='selected-dp',
+            columns=[
+                {"name": i, "id": i, "deletable":True, "selectable":True, "hideable":True}
+                for i in selected_dp.columns
+            ],
+            data=selected_dp.to_dict('records')),
+        html.Br(),
+        html.Div(dcc.Graph('DT-Graph')),
+        html.Br(),
+        html.Div(dcc.Graph('Linear')),
+        html.Br(),
+        dash_table.DataTable(
+            id='in-sample-cf',
+            columns=[
+                {"name": i, "id": i, "deletable":True, "selectable":True, "hideable":True}
+                for i in in_sample_cfs.columns
+            ],
+            data=in_sample_cfs.to_dict('records')),
+        html.Br(),
+        dash_table.DataTable(
+            id='dice', 
+            columns=[
+                {"name": i, "id": i, "deletable":True, "selectable":True, "hideable":True}
+                for i in dice_cfs.columns
+            ],
+            data=dice_cfs.to_dict('records')),
+        html.Br(),
+        html.Div(dcc.Graph('deepShap')),
+        html.Br(),
+        html.Div(dcc.Graph('LRP')),
+        html.Br(),
+        html.Br()
+    ])
+
+@app.callback(
+    Output(component_id='DT-Graph', component_property='figure'),
+    Output(component_id='Linear', component_property='figure'),
+    Output(component_id='in-sample-cf', component_property='data'),
+    Output(component_id='dice', component_property='data'),
+    Output(component_id='deepSahp', component_property='figure'),
+    Output(component_id='LRP', component_property='figure'),
+    Output(component_id='selected_datapoint', component_property='data'),
+    Input(component_id='datapoint_selection_dropdown', component_property='value')
+)
+
+def update_graph(selected_datapoint):
+    idx = helper.get_id_for_dp(selected_datapoint)
+
+    dt_upd = show_decision_tree_path(idx),
+    lin_upd = show_linear_model_both_in_one(idx),
+    cf_upd = show_counterfactual_explanation(idx),
+    dice_upd = show_DiCE_visualization(idx),
+    ds_upd = show_DeepSHAP_visualization(idx),
+    lrp_upd = show_lrp_visualization(idx),
+    dp_upd = selected_datapoint
+
+    return dt_upd, lin_upd, cf_upd, dice_upd, ds_upd, lrp_upd, dp_upd
+
 def main():
     # dt.main()
     # lin.main()
@@ -468,7 +545,8 @@ def main():
     # lrp.main()
     # show_all_plots_interactive()
     # show_dt_lm()
-    show_DiCE_visualization()
+    # show_DiCE_visualization()
+
     print("run server")
     app.run_server()
     
