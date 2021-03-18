@@ -72,7 +72,7 @@ def get_cfs_df(cf, x_test, y_test, sample_id = 0):
     test_dp = inv_cat.tolist() + inv_num.tolist()
     # test_dp.append(y_test[sample_id])
     cf_inv_num, cf_inv_cat = helper.inverse_preprocessing_single(ds, cf)
-    newdf = cf_inv_cat.tolist() + cf_inv_num.tolist()
+    newdf = cf_inv_num.tolist() + cf_inv_cat.tolist()
     for j, val in enumerate(newdf):
         if test_dp[j] == newdf[j]:
             curVal= newdf[j]
