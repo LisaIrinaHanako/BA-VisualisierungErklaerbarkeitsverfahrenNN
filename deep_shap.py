@@ -19,7 +19,7 @@ def get_shap_deep_explainer(x_train):
     return exp
 
 # Function to get the Counterfactuals
-def get_shap_explanation(x_test, explainer, sample_id = 0, no_CFs = 4, desired_class = 1):
+def get_shap_explanation(x_test, explainer, no_CFs = 4, desired_class = 1):
     shap_values = explainer.shap_values(x_test)
     
     return shap_values
@@ -34,7 +34,7 @@ def main():
     shap_explanation = get_shap_explanation(x_test, classifier)
     # shap.plots.bar(shap_explanation[0], show=True)
 
-    print(classifier())
+    # print(classifier())
     print(shap_explanation)
     
 # Calling main function 
