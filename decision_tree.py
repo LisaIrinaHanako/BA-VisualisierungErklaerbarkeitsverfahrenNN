@@ -14,21 +14,36 @@ clf = load_model(path="./interactive_ba_preparation_master/net.pth")
 ds = German_Credit(path="./interactive_ba_preparation_master/german.data")
 
 # Function to calculate DecisionTreeClassifier
-def calc_classifier(x_train, x_test, y_train, y_test, criterion = 'gini',
-                    rand_state = 100, max_d = 15, min_smp_lf = 20, splitter = "best", max_f = None):
+def calc_classifier(x_train, x_test, y_train, y_test, criterion, 
+                    splitter='gini', max_depth=8, min_samples_split=1, min_smp_lf=0,
+                    max_features=None, max_leaf_nodes=None, min_impurity_decrease=0,
+                    min_impurity_split=0,ccp_alpha=0):
     
     classifier = DecisionTreeClassifier(
-            criterion = criterion, random_state = rand_state, 
-            max_depth = max_d, min_samples_leaf = min_smp_lf,
-            max_features = max_f) 
+            criterion = criterion, splitter=splitter, 
+            max_depth = max_depth, min_samples_split=min_samples_split,
+            min_samples_leaf=min_smp_lf, max_features=max_features,
+            max_leaf_nodes=max_leaf_nodes,
+            min_impurity_decrease=min_impurity_decrease,
+            min_impurity_split=min_impurity_split, ccp_alpha=ccp_alpha)
     # Performing classification 
     classifier.fit(x_train, y_train) 
     return classifier 
 
-def get_classifier():
+def get_classifier(idx, criterion, splitter='gini', max_depth=8,
+                            min_samples_split=1, min_smp_lf=0,
+                            max_features=None,
+                            max_leaf_nodes=None, min_impurity_decrease=0,
+                            min_impurity_split=0,ccp_alpha=0):
     x_test, y_test, x_train, y_train, y_net_test, y_net_train = helper.get_samples_and_labels(ds, clf)
 
-    classifier = calc_classifier(x_train, x_test, y_net_train, y_test)
+    classifier = calc_classifier(x_train, x_test, y_net_train, y_test,
+                                criterion = criterion, splitter=splitter, 
+                                max_depth = max_depth, min_samples_split=min_samples_split,
+                                min_smp_lf=min_smp_lf, max_features=max_features,
+                                max_leaf_nodes=max_leaf_nodes,
+                                min_impurity_decrease=min_impurity_decrease,
+                                min_impurity_split=min_impurity_split, ccp_alpha=ccp_alpha)
     return classifier
 
 # Function to plot whole DecisionTree
@@ -58,9 +73,9 @@ def get_explanation_branch(classifier, predictions, datapoint, sample_id):
     node_index = node_indicator.indices[node_indicator.indptr[sample_id]:
                                     node_indicator.indptr[sample_id + 1]]
 
-    print(node_index)
-    print("node indices (that sample goes through): ", node_index)
-    print('Rules used to predict sample {id}:\n'.format(id=sample_id))
+    # print(node_index)
+    # print("node indices (that sample goes through): ", node_index)
+    # print('Rules used to predict sample {id}:\n'.format(id=sample_id))
 
     for node_id in node_index:
         # continue to the next node if it is a leaf node
@@ -74,17 +89,17 @@ def get_explanation_branch(classifier, predictions, datapoint, sample_id):
             threshold_sign = ">"
         feature_name = get_feature_name(datapoint, feature, node_id)
         feature_value = datapoint[sample_id, feature[node_id]]
-        print("decision node {node} : (datapoint[{sample}, (original: still open) scaled: {feature}] = {value}) "
-              "{inequality} {threshold})".format(
-                  node=node_id,
-                  sample=sample_id,
-                  feature=feature_name,
-                  value=feature_value,
-                  inequality=threshold_sign,
-                  threshold=threshold[node_id]))
+    #     print("decision node {node} : (datapoint[{sample}, (original: still open) scaled: {feature}] = {value}) "
+    #           "{inequality} {threshold})".format(
+    #               node=node_id,
+    #               sample=sample_id,
+    #               feature=feature_name,
+    #               value=feature_value,
+    #               inequality=threshold_sign,
+    #               threshold=threshold[node_id]))
     
-    print("\n class: {calculated_class}".format(calculated_class = predictions[sample_id]))
-    print("-"*80)
+    # print("\n class: {calculated_class}".format(calculated_class = predictions[sample_id]))
+    # print("-"*80)
 
 def get_feature_name(datapoint, feature_list, index):
     feature_names = helper.get_feature_labels(ds, len(datapoint[0,:]))
@@ -96,11 +111,13 @@ def main():
 
     # set parameters for classifier calculation
     avg = 0
-    rand_state = 100
+    # rand_state = 100
     max_d = 15
     min_smp_lf = 20
     splitter = "best"
     max_f = None
+    idx = 0
+    criterion = 'gini'
     
     # calculate the DecisionTreeClassifier
     # 20 times to get a hang on average accuracy --> TODO später dann rausnehmen 
@@ -113,7 +130,7 @@ def main():
     # calculate actual classifier result
     # classification_results = calc_classifier(x_train, x_test, y_net_train, y_net_test, 'gini',
     #                                         rand_state, max_d, min_smp_lf, splitter, max_f)
-    classifier = get_classifier()
+    classifier = get_classifier(idx, criterion)
     predictions = classifier.predict(x_test)
     # calculate accuracy
     acc = accuracy_score(predictions, y_test)
@@ -122,7 +139,6 @@ def main():
     # print accuracy average for specified parameters
     print("Accuracy of {} for Tree with \n {} random_state, \n {} depth, \n {} min_sample_leaf".format
                             (avg * 100,
-                            rand_state,
                             max_d,
                             min_smp_lf))
     print("\n", "-"*80, "\n")
