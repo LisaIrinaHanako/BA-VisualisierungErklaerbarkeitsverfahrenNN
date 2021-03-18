@@ -77,6 +77,11 @@ def inverse_preprocessing_single(ds, datapoint):
     inversed_cat = ohe.inverse_transform(cat_features.reshape(1, -1) )
     return inversed_num, inversed_cat[0]
 
+# TODO
+def get_id_for_dp(x_test, dp):
+    idx = x_test.tolist().index(dp)
+    return idx
+
 # Helper function to get categorical indices
 def get_categorical_idx(ds):
     all_categories = ds.column_names[: len(ds.column_names)]
