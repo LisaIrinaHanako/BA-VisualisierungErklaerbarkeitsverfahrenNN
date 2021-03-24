@@ -411,7 +411,7 @@ def show_DeepSHAP_visualization(sample_id=0, no_cfs=4):
 def show_lrp_visualization(layer=0, sample_id=0):
     L, layers, A = lrp.forward(x_test, y_test, sample_id)
     A, R = lrp.lrp_backward(L, layers, A, y_net_test, sample_id)
-    
+    R = lrp.last_step(A, layers, R)
     singleX = ds.cols_onehot
     relevances = []
     
