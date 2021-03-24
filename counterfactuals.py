@@ -14,7 +14,7 @@ ds = German_Credit(path="./interactive_ba_preparation_master/german.data")
 # Function to get a Counterfactual Explainer
 def get_counterfactual_explainer(dataset_to_use):
     cat_idx_list = helper.get_categorical_idx(ds)
-    print(type(clf.predict))
+    # print(type(clf.predict))
     explainer = fatf_cf.CounterfactualExplainer(predictive_function = clf.predict,
                                                 dataset = dataset_to_use,
                                                 categorical_indices=cat_idx_list)
@@ -40,7 +40,7 @@ def describe_data_point(x_test, y_test, classes, data_point_index):
                                 dp_to_explain_class_index,
                                 features_description))
 
-    print(data_point_description)
+    # print(data_point_description)
 
 # Function to print Counterfactuals
 def print_CF(dp_cfs, dp_cfs_distances, dp_cfs_predictions, dp_cfs_predictions_names):
@@ -61,7 +61,7 @@ def textualise(dp_X, dp_cfs, dp_y, dp_cfs_distances, dp_cfs_predictions):
     instance_class=dp_y,
     counterfactuals_distances=dp_cfs_distances,
     counterfactuals_predictions=dp_cfs_predictions)
-    print(dp_cfs_text)
+    # print(dp_cfs_text)
 
 def main():     
     # get trianing and test tensors

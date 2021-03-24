@@ -14,8 +14,8 @@ ds = German_Credit(path="./interactive_ba_preparation_master/german.data")
 def get_cf_explainer(x_train):
     feature_names = ds.cols_onehot
     predict_fn = lambda x: clf.predict(x)
-    print(type(clf.predict))
-    print(type(feature_names))
+    # print(type(clf.predict))
+    # print(type(feature_names))
     # initialize and fit explainer by passing a prediction function and any other required arguments
     explainer = AnchorTab.AnchorTabular(predictor=predict_fn, feature_names=feature_names)
     explainer.fit(x_train)

@@ -41,7 +41,7 @@ def get_cf_explanations_dict(predictions):
     show_only_changes = True
     if df is not None and len(df) > 0:
         if predictions.posthoc_sparsity_param == None:
-            print('\nCounterfactual set (new outcome: {0})'.format(predictions.new_outcome))
+            # print('\nCounterfactual set (new outcome: {0})'.format(predictions.new_outcome))
             if show_only_changes is False:
                 cfs.append(df)  # works only in Jupyter notebook
             else:
@@ -58,7 +58,7 @@ def get_cf_explanations_dict(predictions):
             # predictions.display_df(df, show_only_changes)
         elif hasattr(predictions.data_interface, 'data_df') and display_sparse_df==True and predictions.final_cfs_sparse is not None:
             # CFs
-            print('\nDiverse Counterfactual set (new outcome: {0})'.format(predictions.new_outcome))
+            # print('\nDiverse Counterfactual set (new outcome: {0})'.format(predictions.new_outcome))
             df = predictions.final_cfs_df_sparse
             if show_only_changes is False:
                 cfs.append(df)  # works only in Jupyter notebook
@@ -75,7 +75,7 @@ def get_cf_explanations_dict(predictions):
 
             # predictions.display_df(df, show_only_changes)
         elif hasattr(predictions.data_interface, 'data_df') and display_sparse_df==True and predictions.final_cfs_sparse is None:
-            print('\nPlease specify a valid posthoc_sparsity_param to perform sparsity correction.. displaying Diverse Counterfactual set without sparsity correction (new outcome : %i)' %(predictions.new_outcome))
+            # print('\nPlease specify a valid posthoc_sparsity_param to perform sparsity correction.. displaying Diverse Counterfactual set without sparsity correction (new outcome : %i)' %(predictions.new_outcome))
             df = predictions.final_cfs #(oder final_cfs_pred)
             if show_only_changes is False:
                 cfs.append(df)  # works only in Jupyter notebook
@@ -92,7 +92,7 @@ def get_cf_explanations_dict(predictions):
 
             # predictions.display_df(df, show_only_changes)
         elif not hasattr(predictions.data_interface, 'data_df'):# for private data
-            print('\nDiverse Counterfactual set without sparsity correction since only metadata about each feature is available (new outcome: ', predictions.new_outcome)
+            # print('\nDiverse Counterfactual set without sparsity correction since only metadata about each feature is available (new outcome: ', predictions.new_outcome)
             df = predictions.final_cfs_df #(oder final_cfs_pred)        
             if show_only_changes is False:
                 cfs.append(df)  # works only in Jupyter notebook
@@ -111,7 +111,7 @@ def get_cf_explanations_dict(predictions):
 
         else:
             # CFs
-            print('\nDiverse Counterfactual set without sparsity correction (new outcome: ', predictions.new_outcome)
+            # print('\nDiverse Counterfactual set without sparsity correction (new outcome: ', predictions.new_outcome)
             df = predictions.final_cfs_df #(oder final_cfs_pred)
             if show_only_changes is False:
                 cfs.append(df)  # works only in Jupyter notebook
@@ -147,7 +147,7 @@ def get_cfs_df(predictions, x_test, y_test, sample_id = 0):
                 curVal= newdf[row][j]
                 newdf = newdf.replace({row:{curVal:'-'}})
         if(not keep):
-            print("drop ", row)
+            # print("drop ", row)
             newdf = newdf.drop(row, axis = 1)
 
     return newdf
