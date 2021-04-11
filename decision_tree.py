@@ -106,6 +106,12 @@ def get_feature_name(datapoint, feature_list, index):
     return feature_names[feature_list[index]]
 
 
+# Funktion um Genauigkeit zu berechnen
+def dt_accuracy(predictions, y_net_test):
+    
+    acc = accuracy_score(predictions, y_net_test)
+    return acc
+
 # Main function
 def main(): 
 

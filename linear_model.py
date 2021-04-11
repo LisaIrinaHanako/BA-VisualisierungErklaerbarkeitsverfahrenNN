@@ -14,58 +14,60 @@ clf = load_model(path="./interactive_ba_preparation_master/net.pth")
 ds = German_Credit(path="./interactive_ba_preparation_master/german.data")
 
 # Function to calculate LogisticRegression
-def calc_classifier(x_train, x_test, y_train, y_test,
+def calc_classifier(x_train, x_test, y_net_train, y_net_test,
                     penalty='l2', dual=False, tol=0.0001, 
                     C=1.0, fit_intercept=True, intercept_scaling=1, 
-                    class_weight=None, random_state=None, solver='lbfgs', 
+                    random_state=None, solver='lbfgs', 
                     max_iter=100, multi_class='auto', verbose=0, 
-                    warm_start=False, n_jobs=None, l1_ratio=None):
+                    n_jobs=None, l1_ratio=None):
     
     classifier = LogisticRegression(penalty = penalty, dual = dual, tol = tol, 
                     C = C, fit_intercept=fit_intercept, intercept_scaling=intercept_scaling, 
-                    class_weight=class_weight, random_state=random_state, solver = solver, 
+                    random_state=random_state, solver = solver, 
                     max_iter = max_iter, multi_class=multi_class, verbose=verbose,
-                    warm_start=warm_start, n_jobs=n_jobs,l1_ratio=l1_ratio) 
+                    n_jobs=n_jobs,l1_ratio=l1_ratio) 
     # Performing classification 
-    classifier.fit(x_train, y_train) 
+
+    classifier.fit(x_train, y_net_train) 
     return classifier 
 
 # Funktion um Koeffizienten und Onehot-Spaltennamen (mit einzelnen num. Feature Werten) zu holen
-def get_columns_and_coeff():
-    classifier, predictions = get_classifier_and_predictions()
-    return ds.cols_onehot, classifier.coef_
+def get_columns_and_coeff(penalty='l2', dual=False, tol=0.0001, 
+                        C=1.0, fit_intercept=True, intercept_scaling=1, 
+                        random_state=None, solver='lbfgs', 
+                        max_iter=100, multi_class='auto', verbose=0, 
+                        warm_start=False, n_jobs=None, l1_ratio=None):
+    classifier, predictions = get_classifier_and_predictions(penalty=penalty, dual=dual, tol=tol, 
+                                                            C=C, fit_intercept=fit_intercept, intercept_scaling=intercept_scaling, 
+                                                            random_state=random_state, solver=solver, 
+                                                            max_iter=max_iter, multi_class=multi_class, verbose=verbose, 
+                                                            n_jobs=n_jobs, l1_ratio=l1_ratio)
+    return ds.cols_onehot, classifier.coef_, predictions
 
 # Funktion um Classifier und Predictions zu bestimmen
-def get_classifier_and_predictions():
-    
-    penalty='l2'
-    dual=False
-    tol=0.0001 
-    C=1.0
-    fit_intercept=True
-    intercept_scaling=1 
-    class_weight=None
-    random_state=None
-    solver='lbfgs' 
-    max_iter=100
-    multi_class='auto'
-    verbose=0 
-    warm_start=False
-    n_jobs=None
-    l1_ratio=None
-    
+def get_classifier_and_predictions(penalty='l2', dual=False, tol=0.0001, 
+                                    C=1.0, fit_intercept=True, intercept_scaling=1, 
+                                    random_state=None, solver='lbfgs', 
+                                    max_iter=100, multi_class='auto', verbose=0, 
+                                    warm_start=False, n_jobs=None, l1_ratio=None):
+       
     x_test, y_test, x_train, y_train, y_net_test, y_net_train = helper.get_samples_and_labels(ds, clf)
     
     # calculate actual classifier result
-    classifier = calc_classifier(x_train, x_test, y_net_train, y_net_test,
-                    penalty, dual, tol, 
-                    C, fit_intercept, intercept_scaling, 
-                    class_weight, random_state, solver, 
-                    max_iter, multi_class, verbose, 
-                    warm_start, n_jobs, l1_ratio)
+    classifier = calc_classifier(x_train=x_train, x_test= x_test, y_net_train=y_net_train, y_net_test=y_net_test,
+                                penalty=penalty, dual=dual, tol=tol, 
+                                C=C, fit_intercept=fit_intercept, intercept_scaling=intercept_scaling, 
+                                random_state=random_state, solver=solver, 
+                                max_iter=max_iter, multi_class=multi_class, verbose=verbose, 
+                                n_jobs=n_jobs, l1_ratio=l1_ratio)
     predictions = classifier.predict(x_test)
     return classifier, predictions
 
+# Funktion um Genauigkeit zu berechnen
+def lin_mod_accuracy(predictions, y_net_test):
+    
+    acc = accuracy_score(predictions, y_net_test)
+    return acc
 
 def main():
 

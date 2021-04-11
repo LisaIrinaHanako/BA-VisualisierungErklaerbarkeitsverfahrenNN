@@ -19,19 +19,24 @@ def get_counterfactual_explainer():
     model = dice_ml.Model(model=clf, backend='PYT') #={"model": "sklearn_model.SklearnModel", "explainer": dice_sklearn.DiceSklearn})
 
     explainer = dice_ml.Dice(data, model)
-    
+
     return explainer
 
 # Function to get the Counterfactuals
-def get_counterfactual_explanation(x_test, explainer, sample_id = 0, no_CFs = 4, desired_class = "opposite"):
+def get_counterfactual_explanation(x_test, explainer, sample_id = 0, no_CFs = 4, desired_class = "opposite",
+                                    stopping_threshold = 0.5, posthoc_sparsity_param = 0.1, 
+                                    posthoc_sparsity_algorithm = "linear"):
     # new_vals_num, new_vals_cat = helper.inverse_preprocessing(ds, x_test, sample_id)
     # new_vals_whole = np.hstack([new_vals_num, new_vals_cat])
     # datapoint_dict = dict(zip(ds.column_names, new_vals_whole))
     # print(datapoint_dict)
     datapoint_dict = dict(zip(ds.cols_onehot, x_test[sample_id][0:-2].numpy()))
 
-    dice_exp = explainer.generate_counterfactuals(datapoint_dict, total_CFs=no_CFs, desired_class=desired_class)
+    dice_exp = explainer.generate_counterfactuals(datapoint_dict, total_CFs=no_CFs, desired_class=desired_class,
+                                                    stopping_threshold = stopping_threshold, posthoc_sparsity_param = posthoc_sparsity_param, 
+                                                    posthoc_sparsity_algorithm = posthoc_sparsity_algorithm)
     return dice_exp
+
 
 def get_cf_explanations_dict(predictions):
     

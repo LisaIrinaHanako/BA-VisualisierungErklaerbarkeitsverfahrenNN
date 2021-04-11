@@ -1,3 +1,5 @@
+
+#region imports
 import pandas as pd
 import numpy as np
 import igraph
@@ -6,6 +8,7 @@ from igraph import Graph, EdgeSeq
 # import plotly.express as px
 # %matplotlib inline
 import dash
+import dash_daq as daq
 from dash.dependencies import Input, Output, State
 import dash_table
 
@@ -31,8 +34,11 @@ import plotly.graph_objects as go
 
 from interactive_ba_preparation_master.model import load_model
 from interactive_ba_preparation_master.dataset import German_Credit
+#endregion
+
 
 # Get pretrained PyTorch model and dataset
+#region global Variables
 clf = load_model(path="./interactive_ba_preparation_master/net.pth")
 ds = German_Credit(path="./interactive_ba_preparation_master/german.data")
 app = dash.Dash()
@@ -50,7 +56,9 @@ dice_preditions = None
 global_shap = None
 global_lrp = None
 global_dp_selection_index = None
+#endregion
 
+#region Decision Tree
 def show_decision_tree_path(datapoint_index, criterion='gini', splitter='best', max_depth=8,
                             min_samples_split=2, min_smp_lf=1,
                             max_features=None,
@@ -59,7 +67,7 @@ def show_decision_tree_path(datapoint_index, criterion='gini', splitter='best', 
     global global_dt
     global global_dp_selection_index
     if global_dt == None or global_dp_selection_index == datapoint_index:
-        classifier = dt.get_classifier(datapoint_index, criterion = criterion, splitter=splitter, 
+        classifier = dt.get_classifier(datapoint_index, criterion = criterion, splitter=splitter,
                                         max_depth = max_depth, min_samples_split=min_samples_split,
                                         min_smp_lf=min_smp_lf, max_features=max_features,
                                         max_leaf_nodes=max_leaf_nodes,
@@ -68,12 +76,12 @@ def show_decision_tree_path(datapoint_index, criterion='gini', splitter='best', 
         global_dt = classifier
 
     predictions = global_dt.predict(x_test)
-    
-    
+
+
     feature = global_dt.tree_.feature
     threshold = global_dt.tree_.threshold
     node_indicator = global_dt.decision_path(x_test)
-    
+
     # obtain ids of the nodes `sample_id` goes through, i.e., row `sample_id`
     node_index = node_indicator.indices[node_indicator.indptr[datapoint_index]:
                                     node_indicator.indptr[datapoint_index + 1]]
@@ -84,12 +92,61 @@ def show_decision_tree_path(datapoint_index, criterion='gini', splitter='best', 
     # visual_style["vertex_size"] = 200
     # plot(fig, visual_style)
 
+
+    global y_net_test
+    accuracy = dt.dt_accuracy(predictions, y_net_test)
+
     # return dt_edges, dt_nodes
-    return fig
+    text = show_decision_tree_text([], node_index, feature, x_test, threshold, datapoint_index, predictions)
+    return fig, text, accuracy
+
+def show_decision_tree_text(explanaition_text, node_index, feature, x_test, threshold, datapoint_index, predictions):
+    for node_id in node_index:
+        inversed_num, inversed_cat = helper.inverse_preprocessing_single(ds, x_test[datapoint_index])
+
+        feature_id = feature[node_id]
+        feature_name_onehot = ds.cols_onehot[feature_id]
+        is_cat_feature = feature_name_onehot.__contains__(":")
+
+        threshold_value = threshold[node_id]
+        pred = predictions[node_id]
+
+        if is_cat_feature:
+            feature_name = feature_name_onehot.split(":")[0]
+            feature_value = inversed_cat[helper.get_idx_for_feature(feature_name, inversed_cat)]
+            feature_value = feature_name_onehot.split(":")[1]
+            if (x_test[datapoint_index, feature_id] <= threshold_value):
+                threshold_sign = "!="
+            else:
+                threshold_sign = "="
+            explanaition_text.append(html.Div("Knoten {node}: {feat_name} {thres_sign} {feat_val}\n".format(
+                                node = node_id, feat_name= feature_name, feat_val=feature_value,
+                                thres_sign=threshold_sign)))
+        else:
+            feature_name = feature_name_onehot
+            feature_value = inversed_num[helper.get_idx_for_feature(feature_name, inversed_num)]
+            if (x_test[datapoint_index, feature_id] <= threshold_value):
+                threshold_sign = "<="
+            else:
+                threshold_sign = ">"
+            explanaition_text.append(html.Div("Knoten {node}: {feat_name} = {feat_val} {thres_sign} {thres_val} \n".format(
+                                    node = node_id, feat_name= feature_name, feat_val=feature_value,
+                                    thres_sign=threshold_sign, thres_val= threshold_value)))
+
+        explanaition_text.append(html.Br())
+
+
+    explanaition_text.append("\n Daher ist der Datenpunkt {sample} als Klasse {prediction} bestimmt worden.".format(
+                            sample = datapoint_index, prediction = pred))
+
+    explanaition_text.append(html.Br())
+    explanaition_text.append(html.Br())
+
+    return explanaition_text
 
 def create_and_get_tree(node_index, feature, x_test, threshold, datapoint_index, predictions):
     # create Tree basis G = Graph.Tree(nr_vertices, 2) # 2 stands for children number
-    nr_vertices = 2*max(node_index) 
+    nr_vertices = 2*max(node_index)
     children_count = 2
     G = Graph.Tree(nr_vertices, children_count)
     layout_def = G.layout_reingold_tilford(mode="in", root=[0])
@@ -98,7 +155,7 @@ def create_and_get_tree(node_index, feature, x_test, threshold, datapoint_index,
     # intitialisation of position dict
     position = {k: layout_def[k] for k in range(number_nodes)}
     edge_position = {k : layout_def[k] for k in range(number_nodes)}
-    
+
     # level of the tree: root is 0, children of the root are 1,...
     level = 0.0
     x_pos = 0.0
@@ -112,20 +169,20 @@ def create_and_get_tree(node_index, feature, x_test, threshold, datapoint_index,
     for k in range(number_nodes-1):
         cur = node_index[k]
         next_node = node_index[k+1]
-        level = level + 1.0 
+        level = level + 1.0
         if next_node == cur + 1:
             x_old = x_pos
             x_pos = x_pos -8.0
             # print(x_old, x_pos, 0.5* (x_old+x_pos))
             # add edges' middle positions
             edge_x = 0.5 * (x_old + x_pos) - 2
-        else : 
+        else :
             x_old = x_pos
             x_pos = x_pos + 4
             # print(x_old, x_pos, 0.5*(x_old+x_pos))
             # add edges' middle positions
             edge_x = 0.5 * (x_old + x_pos) + 2
-        # set position values to x and y position of nodes 
+        # set position values to x and y position of nodes
         position[k+1] = [5*x_pos, -100 * level]
         new = old + 1
         # add edge x pos between nodes' x pos
@@ -137,7 +194,7 @@ def create_and_get_tree(node_index, feature, x_test, threshold, datapoint_index,
         edge_position[k+1] = [5*edge_x, edge_y]
         # update x and y pos
         node_x_pos += [5*x_pos]
-        node_y_pos += [-100*level] 
+        node_y_pos += [-100*level]
     # Y = [layout_def[k][1] for k in range(number_nodes)]
     # M = max(Y)
     # print(edge_position)
@@ -145,10 +202,10 @@ def create_and_get_tree(node_index, feature, x_test, threshold, datapoint_index,
     edge_x_pos = []
     edge_y_pos = []
     for edge in edges:
-        if edge[0] < number_nodes and edge[1] < number_nodes: 
+        if edge[0] < number_nodes and edge[1] < number_nodes:
             edge_x_pos+=[position[edge[0]][0],position[edge[1]][0], None]
             edge_y_pos+=[position[edge[0]][1],position[edge[1]][1], None]
-    
+
     labels = get_labels([], node_index, feature, x_test, threshold, datapoint_index, predictions)
     edge_labels = get_edge_labels([], node_index, feature, x_test, threshold, datapoint_index)
     axis = dict(showline=True,
@@ -280,29 +337,40 @@ def make_annotations(labels, position, font_size=10, font_color='rgb(10,40,87)')
                     showarrow=False)
             )
     return annotations
+#endregion
 
+#region Linear Model
 def linear_model_whole_get_xy():
-    lin_cols, lin_coeffs = lin.get_columns_and_coeff()
-    
-    return lin_cols, lin_coeffs[0]
+    lin_cols, lin_coeffs, predictions = lin.get_columns_and_coeff()
 
-def linear_model_single_datapoint_get_xy(datapoint_index = 0):
-    lin_cols, lin_coeffs = lin.get_columns_and_coeff()
+    return lin_cols, lin_coeffs[0], predictions
+
+def linear_model_single_datapoint_get_xy(datapoint_index = 0, penalty='l2', dual=False, tol=0.0001,
+                                        C=1.0, fit_intercept=True, intercept_scaling=1,
+                                        random_state=None, solver='lbfgs',
+                                        max_iter=100, multi_class='auto', verbose=0,
+                                        n_jobs=None, l1_ratio=None):
+    lin_cols, lin_coeffs, predictions = lin.get_columns_and_coeff(penalty=penalty, dual=dual, tol=tol,
+                                                    C=C, fit_intercept=fit_intercept, intercept_scaling=intercept_scaling,
+                                                    random_state=random_state, solver=solver,
+                                                    max_iter=max_iter, multi_class=multi_class, verbose=verbose,
+                                                    n_jobs=n_jobs, l1_ratio=l1_ratio)
     global x_test_set
     new_x_test_set = helper.reshape(x_test_set)
-    
-    dp_coeffs = lin_coeffs[datapoint_index] * new_x_test_set[0]
-    return lin_cols, dp_coeffs
+
+    dp_coeffs = lin_coeffs * new_x_test_set[datapoint_index]
+    dp_coeffs = dp_coeffs[0]
+    return lin_cols, dp_coeffs, predictions
 
 def show_whole_and_specific_linear_model_plot():
-    fig = make_subplots(rows=1, cols=3, 
+    fig = make_subplots(rows=1, cols=3,
                         specs = [[{'type': 'bar'}, {'type' : 'bar'}, {'type' : 'bar'}]],
                         subplot_titles=("Einzelner Datenpunkt", "Ganzes Modell", "beides"))
 
-    singleX, singleY = linear_model_single_datapoint_get_xy()
+    singleX, singleY, predictions = linear_model_single_datapoint_get_xy()
     single_plot = go.Bar(x = singleX, y = singleY, name = "Einzelner Datenpunkt")
 
-    wholeX, wholeY = linear_model_whole_get_xy()
+    wholeX, wholeY, predictions = linear_model_whole_get_xy()
     whole_plot = go.Bar(x = wholeX, y = wholeY, name = "Ganzes Modell")
 
     fig.add_trace(single_plot, row=1, col=1)
@@ -317,15 +385,15 @@ def show_whole_and_specific_linear_model_plot():
     return fig
 
 def show_whole_and_specific_linear_model_plot_no_zeros():
-    fig = make_subplots(rows=1, cols=3, 
+    fig = make_subplots(rows=1, cols=3,
                         specs = [[{'type': 'bar'}, {'type' : 'bar'}, {'type' : 'bar'}]],
                         subplot_titles=("Einzelner Datenpunkt", "Ganzes Modell", "beides"))
     datapoint_index = 0
     # x axis has columns, y axis has coeff values
-    singleX, singleY = linear_model_single_datapoint_get_xy(datapoint_index)
-    wholeX, wholeY = linear_model_whole_get_xy()
+    singleX, singleY, predictions = linear_model_single_datapoint_get_xy(datapoint_index)
+    wholeX, wholeY, predictions = linear_model_whole_get_xy()
     newX = []
-    newSingleY = [] 
+    newSingleY = []
     newWholeY = []
     count = range(len(singleX))
     for i in count:
@@ -333,7 +401,7 @@ def show_whole_and_specific_linear_model_plot_no_zeros():
             newX.append(singleX[i])
             newSingleY.append(singleY[i])
             newWholeY.append(wholeY[i])
-    
+
     single_plot = go.Bar(x = newX, y = newSingleY, name = "Einzelner Datenpunkt")
     whole_plot = go.Bar(x = newX, y = newWholeY, name = "Ganzes Modell")
 
@@ -343,27 +411,35 @@ def show_whole_and_specific_linear_model_plot_no_zeros():
     fig.add_trace(single_fig, row=1, col=3)
     whole_fig = go.Bar(x=newX, y=newWholeY, name = "Ganzes Modell")
     fig.add_trace(whole_fig, row=1, col=3)
-    
+
     fig.update_layout(legend_title_text = "")
     fig.update_xaxes(title_text="Feature")
     fig.update_yaxes(title_text="Relevanz")
     # plot(fig)
     return single_fig, whole_fig
 
-def show_linear_model_both_in_one(sample_id = 0):
-    fig = make_subplots(rows=1, cols=1, 
+def show_linear_model_both_in_one(sample_id = 0, penalty='l2', dual=False, tol=0.0001,
+                                C=1.0, fit_intercept=True, intercept_scaling=1,
+                                random_state=None, solver='lbfgs',
+                                max_iter=100, multi_class='auto', verbose=0,
+                                n_jobs=None, l1_ratio=None):
+    fig = make_subplots(rows=1, cols=1,
                         specs = [[{'type': 'bar'}]],
                         subplot_titles=("Einzelner Datenpunkt und Ganzes Modell"))
 
     # x axis has columns, y axis has coeff values
-    singleX, singleY = linear_model_single_datapoint_get_xy(sample_id)
-    wholeX, wholeY = linear_model_whole_get_xy()
+    singleX, singleY, predictions = linear_model_single_datapoint_get_xy(sample_id, penalty, dual, tol,
+                                                            C, fit_intercept, intercept_scaling,
+                                                            random_state, solver,
+                                                            max_iter, multi_class, verbose,
+                                                            n_jobs, l1_ratio)
+    wholeX, wholeY, predictions = linear_model_whole_get_xy()
     newX = []
-    newSingleY = [] 
+    newSingleY = []
     newWholeY = []
     count = range(len(singleX))
     for i in count:
-        if singleY[i] > 0:
+        if singleY[i] != 0:
             newX.append(singleX[i])
             newSingleY.append(singleY[i])
             newWholeY.append(wholeY[i])
@@ -371,62 +447,109 @@ def show_linear_model_both_in_one(sample_id = 0):
     whole_go = go.Bar(x=newX, y=newWholeY, name = "Ganzes Modell")
     fig.add_trace(single_dp_go, row=1, col=1)
     fig.add_trace(whole_go, row=1, col=1)
-    
+
     fig.update_layout(legend_title_text = "")
     fig.update_xaxes(title_text="Feature")
     fig.update_yaxes(title_text="Relevanz")
     # plot(fig)
     # return fig
     # return single_dp_go, whole_go
-    return fig
 
+    global y_net_test
+    accuracy = lin.lin_mod_accuracy(predictions, y_net_test)
 
-def show_counterfactual_explanation(sample_id=0):
-    classifier, neigh_dist, neigh_ind = inscf.get_classifier_and_predictions()
+    return fig, accuracy
+#endregion
+
+#region In Sample CF
+def show_counterfactual_explanation(n_neighbors=5, weights='uniform',
+                                   algorithm='auto', leaf_size=30, p=2,
+                                   metric='minkowski', metric_params=None,
+                                   sample_id=0, distance_metric = "knn"):
+    neigh_dist, neigh_ind = inscf.get_classifier_and_predictions(n_neighbors=n_neighbors, weights=weights,
+                                                                algorithm=algorithm, leaf_size=leaf_size, p=p,
+                                                                metric=metric, metric_params=metric_params,
+                                                                sample_id=sample_id, distance_metric = distance_metric)
     actual_cf, min_dist = inscf.get_cf_min_dist(neigh_dist, neigh_ind, x_test, y_test, x_train, y_train)
     counterfactuals = inscf.get_cfs_df(actual_cf,x_test,y_test)
 
-    return pd.DataFrame(counterfactuals)
+    in_sample_cfs = pd.DataFrame({'In-Sample Counterfactual':counterfactuals})
+    feature_names = ds.data.columns
+    in_sample_cfs.insert(0,"Eigenschaften", feature_names, True)
+    return in_sample_cfs
+#endregion
 
-def show_DiCE_visualization(sample_id=0):
+#region dice
+def show_DiCE_visualization(sample_id=0, no_CFs = 4, desired_class="opposite",
+                            stopping_threshold = 0.5, posthoc_sparsity_param = 0.1, 
+                            posthoc_sparsity_algorithm = "linear"):
     global global_dice
     global dice_preditions
-    if global_dice == None or dice_preditions == None:
-        global_dice = dice.get_counterfactual_explainer()
-        dice_preditions = dice.get_counterfactual_explanation(x_test, global_dice)
+    # if global_dice == None:
+    global_dice = dice.get_counterfactual_explainer()
+    dice_preditions = dice.get_counterfactual_explanation(x_test=x_test, explainer=global_dice, sample_id=sample_id, no_CFs=no_CFs, desired_class=desired_class,
+                                                            stopping_threshold = stopping_threshold, posthoc_sparsity_param = posthoc_sparsity_param, 
+                                                            posthoc_sparsity_algorithm = posthoc_sparsity_algorithm)
 
     cfs = dice.get_cfs_df(dice_preditions, x_test, y_test, sample_id)
-    
+    print(cfs)
     return cfs
+#endregion
 
-def show_DeepSHAP_visualization(sample_id=0, no_cfs=4):
-    # get predictions 
+#region shap
+def show_DeepSHAP_visualization(sample_id=0, ranked_outputs=None, output_rank_order="max"):
+    # get predictions
     classifier = deeps.get_shap_deep_explainer(x_train)
-    shap_explanation = deeps.get_shap_explanation(x_test, classifier, no_cfs, y_test[sample_id])
-    # print(shap_explanation[0][sample_id].shape)
-    plot_class_0 = go.Bar(x = ds.cols_onehot, y = shap_explanation[0][sample_id], name = "SHAP 0")
-    plot_class_1 = go.Bar(x = ds.cols_onehot, y = shap_explanation[1][sample_id], name = "SHAP 1")
+    shap_explanation = deeps.get_shap_explanation(x_test, classifier, ranked_outputs, output_rank_order)
+
+    shap_barplot_vals_0, shap_barplot_vals_1 = deeps.get_barplot_values(shap_explanation, sample_id)
+
+    x_0 = []
+    y_0 = []
+    x_1 = []
+    y_1 = []
+    for x in shap_barplot_vals_0:
+        x_0.append(x)
+        y_0.append(shap_barplot_vals_0[x])
+
+    for x in shap_barplot_vals_1:
+        x_1.append(x)
+        y_1.append(shap_barplot_vals_1[x])
+
+    plot_class_0 = go.Bar(x = x_0, y = y_0, name = "SHAP 0")
+    plot_class_1 = go.Bar(x = x_1, y = y_1, name = "SHAP 1")
     return plot_class_0, plot_class_1
+#endregion
 
-def show_lrp_visualization(layer=0, sample_id=0):
+#region lrp
+def show_lrp_visualization(layer=0, sample_id=0, lrp_type="gamma"):
     L, layers, A = lrp.forward(x_test, y_test, sample_id)
-    A, R = lrp.lrp_backward(L, layers, A, y_net_test, sample_id)
+    A, R = lrp.lrp_backward(L, layers, A, y_net_test, sample_id, lrp_type)
     R = lrp.last_step(A, layers, R)
-    singleX = ds.cols_onehot
-    relevances = []
-    
+    relevances = None
     newX = []
-    newY = [] 
-    data = R[layer].numpy().tolist()
-    for i in range(len(data)):
-        if data[i] > 0:
-            newX.append(singleX[i])
-            newY.append(data[i])
+    newY = []
 
-    relevances = go.Figure().add_trace(go.Bar(x=newX, y=data, name = "Layer {no}".format(no=layer)))
+    if layer == 0:
+        lrp_barplot_values = lrp.get_barplot_values(R[layer])
+        # filter out values that are 0
+        for i,key in enumerate(lrp_barplot_values):
+            if lrp_barplot_values[key] != 0:
+                newX.append(key)
+                newY.append(lrp_barplot_values[key])
+    else:
+        # filter out values that are 0
+        for i in range(len(R[layer])):
+            if R[layer][i] != 0:
+                newX.append(i)
+                newY.append(R[layer][i])
+        
+    relevances = go.Figure().add_trace(go.Bar(x=newX, y=newY, name = "Layer {no}".format(no=layer)))
 
     return relevances
+#endregion
 
+#region old
 def show_all_plots_interactive():
     # show_decision_tree_path()
     # show_whole_and_specific_linear_model_plot()
@@ -444,10 +567,10 @@ def show_all_plots_interactive():
     shap_fig_0, shap_fig_1 = show_DeepSHAP_visualization()
     # lrp_fig = show_lrp_visualization()
 
-    fig = make_subplots(rows=2, cols=3, 
+    fig = make_subplots(rows=2, cols=3,
                         specs = [[{'type': 'scatter'}, {'type' : 'bar'}, {'type' : 'scatter'}],
                                 [{'type': 'scatter'}, {'type' : 'bar'}, {'type' : 'bar'}]],
-                        subplot_titles=("Entscheidungsbaum", "Lineares Modell", "Conterfactuals (Fat Forensics)", 
+                        subplot_titles=("Entscheidungsbaum", "Lineares Modell", "Conterfactuals (Fat Forensics)",
                                         "Diverse Counterfactual Explanation (DiCE)","DeepSHAP", "Layerwise Relevance Propagation (LRP)"))
     datapoint_index = 0
     fig.add_trace(dt_edges, row=1, col=1)
@@ -461,7 +584,7 @@ def show_all_plots_interactive():
 
     fig.add_trace(shap_fig_0, row=2, col=2)
     fig.add_trace(shap_fig_1, row=2, col=2)
-    
+
     fig.update_layout(legend_title_text = "")
     fig.update_xaxes(title_text="Feature")
     fig.update_yaxes(title_text="Relevanz")
@@ -470,10 +593,10 @@ def show_all_plots_interactive():
     # print("oh-oh, no interactive visuals yet")
 
 def show_dt_lm():
-    
+
     dt_edges, dt_nodes = show_decision_tree_path()
     lm_both_fig_single, lm_both_fig_whole = show_whole_and_specific_linear_model_plot_no_zeros()
-    fig = make_subplots(rows=1, cols=2, 
+    fig = make_subplots(rows=1, cols=2,
                         specs = [[{'type': 'scatter'}, {'type' : 'bar'}]],
                         subplot_titles=("Entscheidungsbaum", "Lineares Modell"))
     datapoint_index = 0
@@ -482,29 +605,41 @@ def show_dt_lm():
     fig.add_trace(lm_both_fig_single, row=1, col=2)
     fig.add_trace(lm_both_fig_whole, row=1, col=2)
 
-    
+
     plot(fig)
+#endregion
+
 
 def dash_set_layout():
+    #region variable preparations
     feature_names = ds.data.columns
 
     selected_dp = pd.DataFrame({'Eigenschaften':feature_names})
     inversed_num, inversed_cat = helper.inverse_preprocessing_single(ds, x_test[0])
     inversed = inversed_num.tolist() + inversed_cat.tolist()
-
     selected_dp.insert(1,"Datenpunkt", inversed, True)
 
     in_sample_cfs = show_counterfactual_explanation()
-    in_sample_cfs.insert(0,"Eigenschaften", feature_names, True)
+    in_sample_cfs.insert(1,"Zu erklärender Datenpunkt", inversed, True)
 
     shap_fig = go.Figure()
     class0, class1 = show_DeepSHAP_visualization()
     shap_fig.add_trace(class0)
     shap_fig.add_trace(class1)
 
+    marks_to_1 = { 0.1*i : "{val}".format(val = helper.round_to_1(0.1*i)) for i in range(10)}
+    marks_to_5 = { i : "{val}".format(val = i) for i in range(5)}
+    marks_to_10 = { i : "{val}".format(val = i) for i in range(10)}
+    marks_to_20 = { i : "{val}".format(val = i) for i in range(20)}
+    marks_to_100 = { 10*i : "{val}".format(val = 10*i) for i in range(10)}
+    marks_to_200 = { 10*i : "{val}".format(val = 10*i) for i in range(20)}
+    marks_shap = {10*i: "{val}".format(val=10*i) for i in range(len(x_test[0]))}
     dice_cfs = show_DiCE_visualization()
+    #endregion
+
     app.layout = html.Div([
         html.Div(html.H2("Visualisierungen")),
+        #region datapoint selection dropdown
         html.Br(),
         html.Div(dcc.Dropdown(
             id='datapoint_selection_dropdown',
@@ -515,66 +650,178 @@ def dash_set_layout():
             value = x_test[0]
         )),
         html.Div(id='dd-output-container'),
+        #endregion
+        #region datapoint visualization
         dash_table.DataTable(
             id='selected-dp',
             columns=[
-                {"name": i, "id": i, "deletable":True, "selectable":True, "hideable":True}
+                {"name": i, "id": i, "deletable":False, "selectable":True, "hideable":True}
                 for i in selected_dp.columns
             ],
             data=selected_dp.to_dict('records')),
         html.Br(),
+        #endregion
+        #region DT- Bereich
         html.Div([
             html.Div("Tiefe"),
-            dcc.Input(id='input_dt_depth', type = 'number', inputMode='numeric', value=8,
-                        max=100, min=2, step=1, required=True),
+            dcc.Slider(id='input_dt_depth', value=8,
+                        max=100, min=2, step=1, marks = marks_to_100),
             html.Div("# Beispiele für Split"),
-            dcc.Input(id='min_samples_split_dt', type = 'number', inputMode='numeric', value=2,
-                        max=100, min=2, step=1, required=True),
+            dcc.Slider(id='min_samples_split_dt', value=2,
+                        max=100, min=2, step=1, marks = marks_to_100),
             html.Div("# Beispiele in Blatt"),
-            dcc.Input(id='min_smp_lf_dt', type = 'number', inputMode='numeric', value=1,
-                        max=100, min=1, step=1, required=True),
+            dcc.Slider(id='min_smp_lf_dt', value=1,
+                        max=100, min=1, step=1, marks = marks_to_100),
             html.Div("# Blätter"),
-            dcc.Input(id='max_leaf_nodes_dt', type = 'number', inputMode='numeric', value=None,
-                        max=100, min=1, step=1, required=True),
+            dcc.Slider(id='max_leaf_nodes_dt', value=None,
+                        max=100, min=1, step=1, marks = marks_to_100),
             html.Div("Minimale Unreinheitsänderung"),
-            dcc.Input(id='min_impurity_decrease_dt', type = 'number', inputMode='numeric', value=0.0,
-                        max=100, min=0.0, step=1, required=True),
+            dcc.Slider(id='min_impurity_decrease_dt', value=0.0,
+                        max=100, min=0.0, step=1, marks = marks_to_100),
             html.Div("Minimale Unreinheit für Split"),
-            dcc.Input(id='min_impurity_split_dt', type = 'number', inputMode='numeric', value=0.0,
-                        max=100, min=0.0, step=1, required=True),
+            dcc.Slider(id='min_impurity_split_dt', value=0.0,
+                        max=100, min=0.0, step=1, marks = marks_to_100),
             html.Div("Pruning"),
-            dcc.Input(id='ccp_alpha_dt', type = 'number', inputMode='numeric', value=0.0,
-                        max=100, min=0.0, step=1, required=True),
+            dcc.Slider(id='ccp_alpha_dt', value=0.0,
+                        max=100, min=0.0, step=1, marks = marks_to_100),
             html.Button(id='submit_button_depth', children='submit'),
-            dcc.RadioItems(id='radio_item_dt', options=[{'label':'Gini', 'value':'gini'}, {'label':'Entropie', 'value':'entropy'}], value='gini'),
+            html.Div("Unreinheitsmaß"),
+            dcc.RadioItems(id='impurity_criterion', options=[{'label':'Gini', 'value':'gini'}, {'label':'Entropie', 'value':'entropy'}], value='gini'),
+            html.Div("Splitter"),
             dcc.RadioItems(id='splitter_dt', options=[{'label':'Best', 'value':'best'}, {'label':'Random', 'value':'random'}], value='best'),
+            html.Div("Maximale #Feature im Blatt"),
             dcc.RadioItems(id='max_features_dt', options=[{'label':'Auto', 'value':'auto'}, {'label':'Wurzel', 'value':'sqrt'}, {'label':'Logarithmus', 'value':'log2'}], value='auto'),
-            dcc.Graph(id = 'DT-Graph', figure = show_decision_tree_path(0))
+            html.Div(id='dt-accuracy'),
+            dcc.Graph(id = 'DT-Graph', figure = show_decision_tree_path(0)),
+            html.Div(id='dt-text')
         ]),
         html.Br(),
-        html.Div(dcc.Graph(id = 'Linear', figure = show_linear_model_both_in_one(0))),
+        #endregion
+        #region Linear Modell- Bereich
+        html.Div([
+            html.Div("Dual? (nur für l2; sonst Primal)"), html.Div(id='dual_output'),
+            daq.BooleanSwitch(id='dual', on=False),
+            html.Div("Toleranz"),
+            dcc.Slider(id='tol', value=1e-4,
+                        max=1, min=0, step=1e-5, marks = marks_to_1),
+            html.Div("Inverse Regulierung"),
+            dcc.Slider(id='C', value=1.0,
+                        max=10, min=0, step=1, marks = marks_to_10),
+            html.Div("Zusätzliche Konstante addieren?"),
+            daq.BooleanSwitch(id='fit_intercept', on=False),
+            html.Div("Intercept Skalierung (nur für liblinear *und* Zusätzliche Konstante addieren = True)"),
+            dcc.Slider(id='intercept_scaling', value=1.0,
+                        max=100, min=1.0, step=1, marks = marks_to_100),
+            html.Div("Random State Instanz (wenn solver = sag/saga/liblinear)"), html.Div(id='random_state_output'),
+            dcc.Slider(id='random_state', value=1.0,
+                        max=100, min=1.0, step=1, marks = marks_to_100),
+            html.Div("# Maximale Iterationen"),
+            dcc.Slider(id='max_iter', value=100,
+                        max=200, min=0, step=1, marks = marks_to_200),
+            html.Div("Verbose (für solver = liblinear/lbfgs)"), html.Div(id='verbose_output'),
+            dcc.Slider(id='verbose', value=0,
+                        max=100, min=0, step=1, marks = marks_to_100),
+            html.Div("n Jobs"),
+            dcc.Slider(id='n_jobs', value=None,
+                        max=100, min=0, step=1, marks = marks_to_100),
+            html.Div("l1-Ratio"),
+            dcc.Slider(id='l1-ratio', value=None,
+                        max=1, min=0, step=1e-2, marks = marks_to_1),
+            html.Button(id='submit_button_lin_mod', children='submit'),
+            html.Div("Penalty"), html.Div(id='penalty_output'),
+            dcc.RadioItems(id='penalty', options=[{'label':'L1', 'value':'l1'}, {'label':'L2', 'value':'l2'}, {'label':'Elastic Net', 'value':'elasticnet'}, {'label':'None', 'value':'none'}], value='l2'),
+            html.Div("Solver"),
+            dcc.RadioItems(id='solver', options=[{'label':'Newton cg', 'value':'newton-cg'}, {'label':'lbfgs', 'value':'lbfgs'}, {'label':'liblinear', 'value':'liblinear'}, {'label':'sag', 'value':'sag'}, {'label':'saga', 'value':'saga'}], value='lbfgs'),
+            html.Div("Multiclass"),
+            dcc.RadioItems(id='multiclass', options=[{'label':'Auto', 'value':'auto'}, {'label':'Ovr', 'value':'ovr'}, {'label':'Multinomial', 'value':'multinomial'}], value='auto'),
+            html.Div(id='lin-mod-accuracy'),
+            dcc.Graph(id = 'Linear', figure = show_linear_model_both_in_one(0))
+        ]),
         html.Br(),
-        dash_table.DataTable(
+        #endregion
+        #region in sample cf
+        html.Div([
+            
+            html.Div("Anzahl Nachbarn"),
+            dcc.Slider(id='n_neighbors', value=5.0,
+                        max=100, min=0.0, step=1, marks = marks_to_100),
+            html.Div("Leaf Size (wichtig für Berechnung des KD-Baums)"),
+            dcc.Slider(id='leaf_size', value=30.0,
+                        max=10, min=0.0, step=1, marks = marks_to_10),
+            html.Div("Potenz für die Minkowski-Metrik"),
+            dcc.Slider(id='p', value=2.0,
+                        max=10, min=1.0, step=1, marks = marks_to_10),
+            html.Button(id='submit_button_cf', children='submit'),
+            html.Div("Gewichte"),
+            dcc.RadioItems(id='weights', options=[{'label':'Gleich verteilt', 'value':'uniform'}, {'label':'Distanz', 'value':'distance'}], value='distance'),
+            html.Div("Algorithmus"),
+            dcc.RadioItems(id='algorithm', options=[{'label':'Auto', 'value':'auto'}, {'label':'Ball Tree', 'value':'ball_tree'}, {'label':'KD Baum', 'value':'kd_tree'}, {'label':'Brute-Force Suche', 'value':'brute'}], value='kd_tree'),
+            html.Div("Distanzmetrik"),
+            dcc.RadioItems(id='distance_metric', options=[{'label':'k-NearestNeighbor', 'value':'knn'}, {'label':'Gower-Distanz', 'value':'gower'}], value='knn'),
+            # html.Div("Wenn knn: Metrik zur Distanzberechnung für knn"),
+            # dcc.RadioItems(id='metric', options=[{'label':'k-NearestNeighbor', 'value':'knn'}, {'label':'Gower-Distanz', 'value':'gower'}], value='knn'),
+            # html.Div("Zusätzliche Parameter für gewählte Metrik"),
+            # dcc.RadioItems(id='metric_params', options=[{'label':'k-NearestNeighbor', 'value':'knn'}, {'label':'Gower-Distanz', 'value':'gower'}], value='knn'),
+            dash_table.DataTable(
             id='in-sample-cf',
             columns=[
-                {"name": i, "id": i, "deletable":True, "selectable":True, "hideable":True}
+                {"name": i, "id": i, "deletable":False, "selectable":True, "hideable":True}
                 for i in in_sample_cfs.columns
             ],
-            data=in_sample_cfs.to_dict('records')),
+            data=in_sample_cfs.to_dict('records'))
+        ]),
         html.Br(),
-        dash_table.DataTable(
-            id='dice', 
+        #endregion
+        #region Dice
+        html.Div([
+            html.Div("# zu berechnender Counterfactuals"),
+            dcc.Slider(id='no_CFs', value=4,
+                        max=20, min=1, step=1, marks = marks_to_20),
+            html.Div("Threshold für Berechnungsende"),
+            dcc.Slider(id='stopping_threshold', value=0.5,
+                        max=1, min=0, step=0.001, marks = marks_to_1),
+            html.Div("Posthoc Parameter"),
+            dcc.Slider(id='posthoc_sparsity_param', value=0.1,
+                        max=1, min=0, step=0.001, marks = marks_to_1),
+            html.Button(id='submit_button_dice', children='submit'),
+            html.Div("Gewünschte Klasse der Counterfactuals"),
+            dcc.RadioItems(id='desired_class', options=[{'label':'Gegenteil der aktuellen', 'value':'opposite'}, {'label':'Aktuelle Klasse', 'value':'same'}], value='opposite'),
+            html.Div("Posthoc Algorithmus"),
+            dcc.RadioItems(id='posthoc_sparsity_algorithm', options=[{'label':'Linear', 'value':'linear'}, {'label':'Binär', 'value':'binary'}], value='linear'),
+            dash_table.DataTable(
+            id='dice',
             columns=[
-                {"name": i, "id": i, "deletable":True, "selectable":True, "hideable":True}
+                {"name": i, "id": i, "deletable":False, "selectable":True, "hideable":True}
                 for i in dice_cfs.columns
             ],
-            data=dice_cfs.to_dict('records')),
+            data=dice_cfs.to_dict('records'))]),
         html.Br(),
-        html.Div(dcc.Graph(id = 'deepShap', figure = shap_fig)),
+        #endregion
+        #region Shap
+        html.Div([
+            html.Div("Ranked Outputs"),
+            dcc.Slider(id='ranked_outputs', value=None,
+                        max=len(x_test[0]), min=0, step=1, marks = marks_shap),
+            html.Button(id='submit_button_shap', children='submit'),
+            html.Div("Output Sortierung"),
+            dcc.RadioItems(id='output_rank_order', options=[{'label':'Max', 'value':'max'}, {'label':'Max Abs', 'value':'max_abs'},{'label':'Min', 'value':'min'}], value='max'),
+            dcc.Graph(id = 'deepShap', figure = shap_fig)
+        ]),
         html.Br(),
-        html.Div(dcc.Graph(id = 'LRP', figure = show_lrp_visualization(0,0))),
+        #endregion
+        #region Lrp
+        html.Div([
+            html.Div("Schicht, die angezeigt werden soll"),
+            dcc.Slider(id='layer', value=0,
+                        max=4, min=0, step=1, marks = marks_to_5),
+            html.Button(id='submit_button_lrp', children='submit'),
+            html.Div("LRP-Typ für Berechnung der hidden-layer Relevanzen"),
+            dcc.RadioItems(id='lrp_type', options=[{'label':'LRP-Gamma', 'value':'gamma'}, {'label':'LRP-Epsilon', 'value':'epsilon'}, {'label':'LRP-0', 'value':'0'}], value='gamma'),
+            dcc.Graph(id = 'LRP', figure = show_lrp_visualization(0,0))
+        ]),
         html.Br(),
         html.Br()
+        #endregion
     ])
 
 @app.callback(
@@ -605,109 +852,216 @@ def update_output(selected_datapoint):
 
 
 @app.callback(
-    Output(component_id='DT-Graph', component_property='figure'),
+    [Output(component_id='DT-Graph', component_property='figure'),
+    Output('dt-text', 'children'),
+    Output('dt-accuracy', 'children')],
     [Input(component_id='submit_button_depth', component_property='n_clicks')],
     [Input(component_id='datapoint_selection_dropdown', component_property='value')],
-    [Input(component_id='radio_item_dt', component_property='value')],
+    [Input(component_id='impurity_criterion', component_property='value')],
     [Input(component_id='splitter_dt', component_property='value')],
     [Input(component_id='max_features_dt', component_property='value')],
     [State(component_id='input_dt_depth', component_property='value')],
     [State(component_id='min_samples_split_dt', component_property='value')],
     [State(component_id='min_smp_lf_dt', component_property='value')],
     [State(component_id='max_leaf_nodes_dt', component_property='value')],
-    [State(component_id='min_impurity_decrease_dt', component_property='value')], 
+    [State(component_id='min_impurity_decrease_dt', component_property='value')],
     [State(component_id='min_impurity_split_dt', component_property='value')],
     [State(component_id='ccp_alpha_dt', component_property='value')])
-def update_dt_depth(n_clicks, selected_datapoint, criterion, splitter, 
-                    max_features, dt_depth, min_samples_split, min_smp_lf, 
-                    max_leaf_nodes, min_impurity_decrease, min_impurity_split, 
+def update_dt_depth(n_clicks, selected_datapoint, criterion, splitter,
+                    max_features, dt_depth, min_samples_split, min_smp_lf,
+                    max_leaf_nodes, min_impurity_decrease, min_impurity_split,
                     ccp_alpha):
     global global_dp_selection_index
     idx = helper.get_id_for_dp(x_test, selected_datapoint)
-    
 
-    dt_upd = show_decision_tree_path(idx, criterion, splitter=splitter, max_depth=dt_depth,
-                                    min_samples_split=min_samples_split, min_smp_lf=min_smp_lf,
-                                    max_features=max_features,
-                                    max_leaf_nodes=max_leaf_nodes, min_impurity_decrease=min_impurity_decrease,
-                                    min_impurity_split=min_impurity_split,ccp_alpha=0)
+
+    dt_upd, text, accuracy  = show_decision_tree_path(idx, criterion, splitter=splitter, max_depth=dt_depth,
+                                            min_samples_split=min_samples_split, min_smp_lf=min_smp_lf,
+                                            max_features=max_features,
+                                            max_leaf_nodes=max_leaf_nodes, min_impurity_decrease=min_impurity_decrease,
+                                            min_impurity_split=min_impurity_split,ccp_alpha=0)
     global_dp_selection_index = idx
-    print("DT Callback depth")
-    return dt_upd
+
+    accuracy = "Genauigkeit: {acc}".format(acc=accuracy)
+    print("DT Callback ")
+    return dt_upd, text, accuracy
 
 
 @app.callback(
-    Output(component_id='Linear', component_property='figure'),
-    [Input(component_id='datapoint_selection_dropdown', component_property='value')])
-def update_lin(selected_datapoint):
+    [Output(component_id='Linear', component_property='figure'),
+    Output(component_id='dual_output', component_property='children'),
+    Output(component_id='penalty_output', component_property='children'),
+    Output(component_id='random_state_output', component_property='children'),
+    Output(component_id='verbose_output', component_property='children'),
+    Output(component_id='lin-mod-accuracy', component_property='children')
+    ],
+    [Input(component_id='submit_button_lin_mod', component_property='n_clicks')],
+    [Input(component_id='datapoint_selection_dropdown', component_property='value')],
+    [Input(component_id='penalty', component_property='value')],
+    [Input(component_id='tol', component_property='value')],
+    [Input(component_id='intercept_scaling', component_property='value')],
+    [Input(component_id='solver', component_property='value')],
+    [Input(component_id='multiclass', component_property='value')],
+    [State(component_id='fit_intercept', component_property='on')],
+    [State(component_id='dual', component_property='on')],
+    [State(component_id='C', component_property='value')],
+    [State(component_id='random_state', component_property='value')],
+    [State(component_id='max_iter', component_property='value')],
+    [State(component_id='verbose', component_property='value')],
+    [State(component_id='n_jobs', component_property='value')],
+    [State(component_id='l1-ratio', component_property='value')])
+def update_lin(n_clicks, selected_datapoint, penalty, tol,
+                intercept_scaling, solver, multi_class,
+                fit_intercept, dual, C, random_state, max_iter,
+                verbose, n_jobs, l1_ratio):
     idx = helper.get_id_for_dp(x_test, selected_datapoint)
+    penalty_output = ""
+    random_state_output = ""
+    verbose_output = ""
+    dual_output = ""
+
+    if solver != "sag" and solver != "saga" and solver != "liblinear":
+        random_state = None
+        random_state_output = "Solver muss sag/saga/liblinear sein."
+
+    if solver != "lbfgs" and solver != "liblinear":
+        verbose = 0
+        verbose_output = "Solver muss lbfgs/liblinear sein"
+
+    if solver == "lbfgs":
+        if penalty != "l2" and penalty != "none":
+            if penalty == "l2":
+                penalty = "l2"
+            else:
+                penalty = "none"
+            penalty_output = "Solver lbfgs unterstützt nur l2/none penalty"
+        if dual:
+            dual = False
+            dual_output = "Solver lbfgs unterstützt nur dual = False"
+
+    if penalty == "elasticnet" and solver != "saga":
+        if solver != "liblinear":
+            penalty = "none"
+        else:
+            penalty = "l2"
+        penalty_output = "Nur solver saga unterstützt penalty elasticnet"
+
+    if penalty == "elasticnet" and l1_ratio == None:
+        l1_ratio = 1
+        penalty_output = "l1- Ratio muss für Penalty elasticnet gesetzt sein"
     
-    lin_upd = show_linear_model_both_in_one(idx)
+    if l1_ratio != None and penalty != "elasticnet":
+        l1_ratio = None
+        penalty_output = "l1- Ratio wird nur für Penalty elasticnet verwendet"
+
+
+    lin_upd, accuracy= show_linear_model_both_in_one(idx, penalty, dual, tol,
+                                            C, fit_intercept, intercept_scaling,
+                                            random_state, solver,
+                                            max_iter, multi_class, verbose,
+                                            n_jobs, l1_ratio)
     print("Linear Model Callback")
-    return lin_upd
+
+    accuracy = "Genauigkeit: {acc}".format(acc=accuracy)
+
+    return lin_upd, dual_output, penalty_output, random_state_output, verbose_output, accuracy
 
 
 @app.callback(
     Output(component_id='in-sample-cf', component_property='data'),
-    [Input(component_id='datapoint_selection_dropdown', component_property='value')])
-def update_cf(selected_datapoint):
+    [Input(component_id='submit_button_cf', component_property='n_clicks')],
+    [Input(component_id='datapoint_selection_dropdown', component_property='value')],
+    [Input(component_id='distance_metric', component_property='value')],
+    [Input(component_id='weights', component_property='value')],
+    [Input(component_id='algorithm', component_property='value')],
+    [State(component_id='n_neighbors', component_property='value')],
+    [State(component_id='leaf_size', component_property='value')],
+    [State(component_id='p', component_property='value')])
+def update_cf(n_clicks, selected_datapoint, distance_metric, weights,
+                algorithm, n_neighbors, leaf_size, p):
     idx = helper.get_id_for_dp(x_test, selected_datapoint)
+
+    cf_upd = show_counterfactual_explanation(n_neighbors=n_neighbors, weights=weights,
+                                            algorithm=algorithm, 
+                                            leaf_size=leaf_size, p=p,
+                                            metric='minkowski',  
+                                            metric_params=None,
+                                            sample_id=idx, distance_metric=distance_metric)
+
     
-    cf_upd = show_counterfactual_explanation(idx)
+    inversed_num, inversed_cat = helper.inverse_preprocessing_single(ds, x_test[idx])
+    inversed = inversed_num.tolist() + inversed_cat.tolist()
+
+    cf_upd.insert(1,"Zu erklärender Datenpunkt", inversed, True)
+
     print("CF Callback")
+    print(distance_metric, ", ",weights, ", ",algorithm, ", ",n_neighbors, ", ",leaf_size, ", ",p)
+
     return cf_upd.to_dict('records')
 
 
 @app.callback(
     Output(component_id='dice', component_property='data'),
-    [Input(component_id='datapoint_selection_dropdown', component_property='value')])
-def update_dice(selected_datapoint):
+    [Input(component_id='submit_button_dice', component_property='n_clicks')],
+    [Input(component_id='datapoint_selection_dropdown', component_property='value')],
+    [Input(component_id='desired_class', component_property='value')],
+    [Input(component_id='posthoc_sparsity_algorithm', component_property='value')],
+    [State(component_id='no_CFs', component_property='value')],
+    [State(component_id='stopping_threshold', component_property='value')],
+    [State(component_id='posthoc_sparsity_param', component_property='value')])
+def update_dice(n_clicks, selected_datapoint, desired_class,
+                posthoc_sparsity_algorithm, no_CFs,
+                stopping_threshold, posthoc_sparsity_param):
     idx = helper.get_id_for_dp(x_test, selected_datapoint)
+
+    print("start calc: ", desired_class, ", ",posthoc_sparsity_algorithm, ", ",no_CFs, ", ",stopping_threshold, ", ",posthoc_sparsity_param)
+    if desired_class == "same":
+        desired_class = y_net_test[idx]
     
-    dice_upd = show_DiCE_visualization(idx)
+    dice_upd = show_DiCE_visualization(idx, no_CFs=no_CFs, desired_class=desired_class,
+                                        stopping_threshold = stopping_threshold, 
+                                        posthoc_sparsity_param = posthoc_sparsity_param, 
+                                        posthoc_sparsity_algorithm = posthoc_sparsity_algorithm)
     print("Dice Callback")
     return dice_upd.to_dict('records')
 
-    
+
 @app.callback(
     Output(component_id='deepShap', component_property='figure'),
-    [Input(component_id='datapoint_selection_dropdown', component_property='value')])
-def update_ds(selected_datapoint):
+    [Input(component_id='submit_button_shap', component_property='n_clicks')],
+    [Input(component_id='datapoint_selection_dropdown', component_property='value')],
+    [Input(component_id='ranked_outputs', component_property='value')],
+    [Input(component_id='output_rank_order', component_property='value')])
+def update_ds(n_clicks, selected_datapoint, ranked_outputs, output_rank_order):
     idx = helper.get_id_for_dp(x_test, selected_datapoint)
-    
+
     ds_upd = go.Figure()
-    ds_upd_0, ds_upd_1= show_DeepSHAP_visualization(idx)
+    ds_upd_0, ds_upd_1= show_DeepSHAP_visualization(idx, ranked_outputs, output_rank_order)
     ds_upd.add_trace(ds_upd_0)
     ds_upd.add_trace(ds_upd_1)
     print("Shap Callback")
     return ds_upd
 
-    
+
 @app.callback(
     Output(component_id='LRP', component_property='figure'),
-    [Input(component_id='datapoint_selection_dropdown', component_property='value')])
-def update_lrp(selected_datapoint):
+    [Input(component_id='submit_button_lrp', component_property='n_clicks')],
+    [Input(component_id='datapoint_selection_dropdown', component_property='value')],
+    [Input(component_id='lrp_type', component_property='value')],
+    [State(component_id='layer', component_property='value')])
+def update_lrp(n_clicks, selected_datapoint, lrp_type, layer):
     idx = helper.get_id_for_dp(x_test, selected_datapoint)
-    
-    lrp_upd = show_lrp_visualization(0,idx)
+
+    lrp_upd = show_lrp_visualization(layer,idx, lrp_type)
     print("lrp Callback")
     return lrp_upd
 
 def main():
-    # dt.main()
-    # lin.main()
-    # cf.main()
-    # dice.main()
-    # ds.main()
-    # lrp.main()
-    # show_all_plots_interactive()
-    # show_dt_lm()
-    # show_DiCE_visualization()
     dash_set_layout()
     print("run server")
     app.run_server()
-    
 
-# Calling main function 
-if __name__=="__main__": 
-    main() 
+
+# Calling main function
+if __name__=="__main__":
+    main()

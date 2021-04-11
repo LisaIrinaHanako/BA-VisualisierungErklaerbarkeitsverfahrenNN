@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import tensorflow as tf
 import numpy as np
 import torchvision
 import helper_methods as helper
@@ -41,7 +42,7 @@ def newlayer(layer, g):
         layer.bias = torch.nn.Parameter(g(layer.bias))
     return layer
 
-def lrp_backward(L, layers, A, y_test_net, sample_id=0):
+def lrp_backward(L, layers, A, y_test_net, sample_id=0, type = "gamma"):
     # was ist das?
     T = torch.FloatTensor((1.0*(np.arange(2)).reshape([1,2,1])))
     # T = torch.FloatTensor([T])
@@ -51,13 +52,18 @@ def lrp_backward(L, layers, A, y_test_net, sample_id=0):
         # brauche ich hier noch mehr Layer-Abfragen? 
         if isinstance(layers[l],torch.nn.Linear):
             # ausprobieren?
-            # if l <= 1:
-            # LRP-Gamma
-            rho = lambda p: p + 0.25*p.clamp(min=0)
-            incr = lambda z: z+1e-9
-            # if 2 <= l <= 3:
-            #     rho = lambda p: p
-            #     incr = lambda z: z+1e-9+0.25*((z**2).mean()**.5).data
+            # LRP-Epsilon
+            if type == "epsilon":
+                rho = lambda p: p
+                incr = lambda z: z+1e-9+0.25*((z**2).mean()**.5).data
+            # LRP-0
+            elif type == "0":
+                rho = lambda p: p
+                incr = lambda z: z+1e-9
+            else: 
+            # LRP-Gamma (default)
+                rho = lambda p: p + 0.25*p.clamp(min=0)
+                incr = lambda z: z+1e-9
 
             z = incr(newlayer(layers[l],rho).forward(A[l]))  
             s = (R[l+1]/z).data                                    # step 2
@@ -94,33 +100,52 @@ def last_step(A, layers, R):
     # R[0] = (A[0]*c).data                                                   # step 4
     
     
-    
-    
     # Schritt für den letzten layer 
     # w^2 rule
     A[0] = (A[0].data).requires_grad_(True)
     w = newlayer(layers[0], lambda x: x).weight
-    print("weights: ", w.shape)
+    w_transpose = torch.transpose(w,0,1)
+    # print("weights: ", w.shape, len(w), len(w[0]))
     # nenner = (w**2).sum()
 
-    # calculate nenner : sum_i w_{ij}^2
     nenner = []
-    for i in range(len(w)):
-        nenner.append((w[i]**2).sum())
-    
-    # calculate zaehler w: sum_j w_{ij}^2
     zaehler_w_sq = []
-    for i in range(len(R[1])):
-        zaehler_w_sq.append((w[:][i]**2).sum())
-    zaehler_r = R[1]
+    # calculate nenner : sum_i w_{ij}^2
+    # calculate zaehler w: sum_j w_{ij}^2
+    for i in range(len(w)):
+        w_sum = 0
+        for j in range(len(w[0])):
+            w_sum += (w[i][j]**2).sum()
+        nenner.append(w_sum)
+    nenner = torch.Tensor(nenner)
+    # print("nenner: ", nenner.shape)
+    
+    
+    for j in range(len(w[0])):
+        w_helper = (w_transpose[j].detach().numpy())**2
+        zaehler_w_sq.append(w_helper)
+
+    zaehler_w_sq = torch.Tensor(zaehler_w_sq)
+    # print("zaehler_w_sq: ", zaehler_w_sq.shape)
+
+    zaehler_r = torch.Tensor(R[1].detach().numpy())
+    # print("zaehler_r: ", zaehler_r.shape)
     
     # calculate relevances: R[1] * zaehler w / nenner = (R*w^2)/(sum w^2)
-    R[0]=(torch.Tensor(zaehler_r)*torch.Tensor(zaehler_w_sq))/torch.Tensor(nenner)
+    R[0]=torch.Tensor((np.tensordot(zaehler_w_sq,(zaehler_r/nenner), axes=([1],[0]))))
 
     return R
 
+# Function to sum up all one-hot encoded column values
+def get_barplot_values(vals):
+    col_vals_summed = dict(zip(ds.column_names, [0]*(len(ds.column_names))))
+    for count, i in enumerate(vals):
+        col_onehot = ds.cols_onehot[count]
+        col_name = col_onehot.split(':')[0]
+        col_vals_summed[col_name] += i.item()
+    return col_vals_summed
 
-    
+
 def main(): 
     # get trianing and test tensors and net trained labels
     x_test, y_test, x_train, y_train, y_net_test, y_net_train = helper.get_samples_and_labels(ds, clf)
@@ -130,8 +155,11 @@ def main():
     A, R = lrp_backward(L, layers, A, y_net_test, sample_id)
     R = last_step(A, layers, R)
 
+    print(R[0].shape)
     for t in R:
         print(sum(list(t)))
+
+    get_inversed_lrp_first_layer(R)
 
     
 # Calling main function 

@@ -2,6 +2,8 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.utils.validation import check_is_fitted
 from sklearn.compose import ColumnTransformer
 import torch
+from math import log10, floor
+
 
 # Function to get test, training and training net samples and labels
 def get_samples_and_labels(ds, clf):
@@ -53,11 +55,11 @@ def get_feature_labels(ds, number_of_features):
 
 
 # Function to inverse transform preprocessing of numerical features
-def inverse_preprocessing(ds, datapoint, sample_id = 0):
+def inverse_preprocessing(ds, datapoints, sample_id = 0):
     transformer = ds.transformer
     scaler = transformer.named_transformers_['num']
     ohe = transformer.named_transformers_['ohe']
-    features = datapoint[sample_id]
+    features = datapoints[sample_id]
     num_features = features[0:len(ds.numerical_variables)]
     cat_features = features[len(num_features):]
 
@@ -94,6 +96,16 @@ def get_categorical_idx(ds):
         if(categorical_vars[i] == cat):
             categorical_idx = categorical_idx.append(i)
     return categorical_idx
+
+# Helper function to get numerical indices
+def get_idx_for_feature(feature_name, names_list):
+    for i, feature in enumerate(names_list):
+        if(names_list[i] == feature):
+            return i
+    return -1
+
+def round_to_1(x):
+   return round(x, 3)
 
 # Function to make and print predictions for given datapoints and classifier
 def print_prediction(datapoint, clf_object): 
