@@ -58,7 +58,6 @@ def plot_result_tree(classification_results, feature_names_count):
                     class_names = list("".join(map(str, set(ds.label)))),
                     fontsize=4,
                     node_ids = True)
-    # fig = plt.figure(figsize=(25,20))
     plt.show()
 
 def get_explanation_branch(classifier, predictions, datapoint, sample_id):
@@ -68,20 +67,11 @@ def get_explanation_branch(classifier, predictions, datapoint, sample_id):
 
     # explanation_branch = classifier.tree_
     node_indicator = classifier.decision_path(datapoint)
-    # leaf_id = classifier.apply(datapoint)
     # obtain ids of the nodes `sample_id` goes through, i.e., row `sample_id`
     node_index = node_indicator.indices[node_indicator.indptr[sample_id]:
                                     node_indicator.indptr[sample_id + 1]]
 
-    # print(node_index)
-    # print("node indices (that sample goes through): ", node_index)
-    # print('Rules used to predict sample {id}:\n'.format(id=sample_id))
-
     for node_id in node_index:
-        # continue to the next node if it is a leaf node
-        # if leaf_id[sample_id] == node_id:
-        #     continue
-        
         # check if value of the split feature for sample 0 is below threshold
         if (datapoint[sample_id, feature[node_id]] <= threshold[node_id]):
             threshold_sign = "<="
@@ -89,17 +79,6 @@ def get_explanation_branch(classifier, predictions, datapoint, sample_id):
             threshold_sign = ">"
         feature_name = get_feature_name(datapoint, feature, node_id)
         feature_value = datapoint[sample_id, feature[node_id]]
-    #     print("decision node {node} : (datapoint[{sample}, (original: still open) scaled: {feature}] = {value}) "
-    #           "{inequality} {threshold})".format(
-    #               node=node_id,
-    #               sample=sample_id,
-    #               feature=feature_name,
-    #               value=feature_value,
-    #               inequality=threshold_sign,
-    #               threshold=threshold[node_id]))
-    
-    # print("\n class: {calculated_class}".format(calculated_class = predictions[sample_id]))
-    # print("-"*80)
 
 def get_feature_name(datapoint, feature_list, index):
     feature_names = helper.get_feature_labels(ds, len(datapoint[0,:]))
@@ -125,29 +104,20 @@ def main():
     idx = 0
     criterion = 'gini'
     
-    # calculate the DecisionTreeClassifier
-    # 20 times to get a hang on average accuracy --> TODO später dann rausnehmen 
-    # for i in range(20):
 
     # get trianing and test tensors and net trained labels
     x_test, y_test, x_train, y_train, y_net_test, y_net_train = helper.get_samples_and_labels(ds, clf)
     
-    
-    # calculate actual classifier result
-    # classification_results = calc_classifier(x_train, x_test, y_net_train, y_net_test, 'gini',
-    #                                         rand_state, max_d, min_smp_lf, splitter, max_f)
+    # calculate the DecisionTreeClassifier
     classifier = get_classifier(idx, criterion)
+    # calculate actual result
     predictions = classifier.predict(x_test)
+    
     # calculate accuracy
     acc = accuracy_score(predictions, y_test)
-    avg = avg + acc
     
     # print accuracy average for specified parameters
-    print("Accuracy of {} for Tree with \n {} random_state, \n {} depth, \n {} min_sample_leaf".format
-                            (avg * 100,
-                            max_d,
-                            min_smp_lf))
-    print("\n", "-"*80, "\n")
+    print("Accuracy of {} for Tree ".format(acc))
 
     get_explanation_branch(classifier, predictions, x_test, sample_id=0)
     plot_result_tree(classifier, len(x_test[0,:]))

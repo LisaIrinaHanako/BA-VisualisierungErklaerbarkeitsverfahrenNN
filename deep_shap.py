@@ -12,17 +12,21 @@ from shap import Explanation
 clf = load_model(path="./interactive_ba_preparation_master/net.pth")
 ds = German_Credit(path="./interactive_ba_preparation_master/german.data")
 
+explainer_results = None
+
 # Function to get a Counterfactual Explainer
 def get_shap_deep_explainer(x_train):
     explainer = shap.DeepExplainer(clf, x_train)
     exp = shap.explainers._deep.PyTorchDeep(clf, x_train)
     return exp
 
-# Function to get the Counterfactuals
-def get_shap_explanation(x_test, explainer, ranked_outputs = None, output_rank_order = "max", check_additivity = False):
-    shap_values = explainer.shap_values(X = x_test,ranked_outputs = ranked_outputs, output_rank_order=output_rank_order)
+# # Function to get the Counterfactuals
+# def get_shap_explanation(sample_id, explainer):
+#     shap_values = get_all_shap_results(explainer)
     
-    return shap_values
+#     shap_0 = shap_values[0]
+#     shap_1 = shap_values[1]
+#     return shap_0, shap_1
 
 # Function to sum up all one-hot encoded column values
 def get_barplot_values(vals, sample_id):
@@ -39,6 +43,15 @@ def get_barplot_values(vals, sample_id):
         col_vals_summed_1[col_name] += i
 
     return col_vals_summed_0, col_vals_summed_1
+
+# Function to pre-calculate results for all datapoints
+def get_all_shap_results(x_test, explainer):
+    global explainer_results
+    if (explainer_results == None):
+        print("shap intern: ergebnisse neu berechnet")
+        explainer_results = explainer.shap_values(x_test)
+
+    return explainer_results
 
 def main():
 

@@ -17,7 +17,7 @@ ds = German_Credit(path="./interactive_ba_preparation_master/german.data")
 def calc_classifier(x_train, x_test, y_net_train, y_net_test,
                     penalty='l2', dual=False, tol=0.0001, 
                     C=1.0, fit_intercept=True, intercept_scaling=1, 
-                    random_state=None, solver='lbfgs', 
+                    random_state=None, solver='sag', 
                     max_iter=100, multi_class='auto', verbose=0, 
                     n_jobs=None, l1_ratio=None):
     
@@ -34,7 +34,7 @@ def calc_classifier(x_train, x_test, y_net_train, y_net_test,
 # Funktion um Koeffizienten und Onehot-Spaltennamen (mit einzelnen num. Feature Werten) zu holen
 def get_columns_and_coeff(penalty='l2', dual=False, tol=0.0001, 
                         C=1.0, fit_intercept=True, intercept_scaling=1, 
-                        random_state=None, solver='lbfgs', 
+                        random_state=None, solver='sag', 
                         max_iter=100, multi_class='auto', verbose=0, 
                         warm_start=False, n_jobs=None, l1_ratio=None):
     classifier, predictions = get_classifier_and_predictions(penalty=penalty, dual=dual, tol=tol, 
@@ -47,7 +47,7 @@ def get_columns_and_coeff(penalty='l2', dual=False, tol=0.0001,
 # Funktion um Classifier und Predictions zu bestimmen
 def get_classifier_and_predictions(penalty='l2', dual=False, tol=0.0001, 
                                     C=1.0, fit_intercept=True, intercept_scaling=1, 
-                                    random_state=None, solver='lbfgs', 
+                                    random_state=None, solver='sag', 
                                     max_iter=100, multi_class='auto', verbose=0, 
                                     warm_start=False, n_jobs=None, l1_ratio=None):
        

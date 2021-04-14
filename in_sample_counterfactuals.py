@@ -48,53 +48,79 @@ def get_columns_and_coeff():
 # Funktion um Classifier und Predictions zu bestimmen
 def get_classifier_and_predictions(n_neighbors=5, weights='uniform',
                                    algorithm='auto', leaf_size=30, p=2,
-                                   metric='minkowski', metric_params=None,
-                                   sample_id=0, distance_metric = "knn"):
+                                   metric='euclidean', metric_params=None,
+                                   sample_id=0, distance_metric = "euclidean"):
     
     x_test, y_test, x_train, y_train, y_net_test, y_net_train = helper.get_samples_and_labels(ds, clf)
-    if distance_metric == "knn":
+    if distance_metric == "gower": #gower
+        df = pd.DataFrame(x_test)
+        classifier = calc_knn_classifier(x_train, x_test, y_train, y_test,
+                                            n_neighbors, weights, algorithm,
+                                            leaf_size, p, gower.gower_matrix, metric_params=df)
+    #    neigh_dist, neigh_ind = calc_gower_distance(x_test, 0)
+    else: 
         # calculate actual classifier result
         classifier = calc_knn_classifier(x_train, x_test, y_train, y_test,
-                        n_neighbors, weights, algorithm,
-                        leaf_size, p, metric, metric_params)
-
-        neigh_dist, neigh_ind = classifier.kneighbors(x_test[sample_id].reshape(1,-1), n_neighbors, return_distance=True)
-    elif distance_metric == "gower": #gower
-       neigh_dist, neigh_ind = calc_gower_distance(x_test, 0)
-    else: # wrong metric
-        print("Oh-oh, wrong metric selected")
+                                            n_neighbors, weights, algorithm,
+                                            leaf_size, p, metric, metric_params)
+    neigh_dist, neigh_ind = classifier.kneighbors(x_test[sample_id].reshape(1,-1), n_neighbors, return_distance=True)
 
     print(neigh_dist, neigh_ind)
     return neigh_dist, neigh_ind
 
-def get_cf_min_dist(neigh_dist, neigh_ind, x_test, y_test, x_train, y_train, sample_id=0):
+def get_cf_min_dist(neigh_dist, neigh_ind, n_neighbors, x_test, y_test, x_train, y_train, sample_id=0):
     neighbors = neigh_ind[sample_id]
     neighbor_dist = neigh_dist[sample_id]
     ref_class = y_test[sample_id]
-    min_dist = max(neighbor_dist)
-    actual_cf = None
+    max_of_min_dists = max(neighbor_dist)
+    count = 0
+    actual_cf = []
 
     for i, neigh in enumerate(neighbors):
         if(y_train[neigh] != ref_class):
-            test_dist = neighbor_dist[i]
-            if(test_dist < min_dist):
-                min_dist = test_dist
-                actual_cf = x_train[neigh]
+            actual_cf.append(x_train[neigh])
+        else:
+            count += 1    
 
-    return actual_cf, min_dist
+    # for i, neigh in enumerate(neighbors):
+    #     if(y_train[neigh] != ref_class):
+    #         test_dist = neighbor_dist[i]
+    #         if len(actual_cf) > n_neighbors: 
+    #             if(test_dist < max_of_min_dists):
+    #                 ind_to_remove = -1
+    #                 for to_remove, ind in tuple_list:
+    #                     if to_remove == max_of_min_dists:
+    #                         ind_to_remove = ind
+    #                         break
+    #                 value_to_remove = x_train[ind_to_remove]
+    #                 actual_cf.remove(value_to_remove)
+    #                 tuple_list.remove((value_to_remove,ind_to_remove))
+    #                 actual_cf.append(x_train[neigh])
+    #                 max_of_min_dists = max(actual_cf)
+    #         else:
+    #             tuple_list = (neigh, test_dist)
+    #             actual_cf.append(x_train[neigh])
+    #             max_of_min_dists = max(actual_cf)
+
+    return actual_cf, count
 
 
-def get_cfs_df(cf, x_test, y_test, sample_id = 0):
+def get_cfs_df(all_cfs, x_test, y_test, sample_id = 0):
     inv_num, inv_cat = helper.inverse_preprocessing(ds, x_test, sample_id)
     test_dp = inv_cat.tolist() + inv_num.tolist()
+    newdf = []
     # test_dp.append(y_test[sample_id])
-    cf_inv_num, cf_inv_cat = helper.inverse_preprocessing_single(ds, cf)
-    newdf = cf_inv_num.tolist() + cf_inv_cat.tolist()
-    for j, val in enumerate(newdf):
-        if test_dp[j] == newdf[j]:
-            curVal= newdf[j]
-            newdf[j] = '-'
-    return newdf
+    for i,cf in enumerate(all_cfs):
+        cf_inv_num, cf_inv_cat = helper.inverse_preprocessing_single(ds, cf)
+        newdf.append(cf_inv_num.tolist() + cf_inv_cat.tolist())
+        for j in range(len(newdf[i])):
+            list = newdf[i]
+            if test_dp[j] == list[j]:
+                curVal= list[j]
+                newdf[i][j] = '-'
+    
+    cf_df = pd.DataFrame(newdf, columns=ds.numerical_variables + ds.categorical_variables)
+    return cf_df
 
 def main():
 
@@ -103,11 +129,11 @@ def main():
     
     # get predictions 
     neigh_dist, neigh_ind = get_classifier_and_predictions()
-    
+    n_neighbors = 4
     print(neigh_dist)
     print(neigh_ind)
 
-    actual_cf, min_dist = get_cf_min_dist(neigh_dist, neigh_ind, x_test, y_test, x_train, y_train)
+    actual_cf, min_dist = get_cf_min_dist(neigh_dist, neigh_ind, n_neighbors, x_test, y_test, x_train, y_train)
     print(actual_cf)
     print(min_dist)
 
