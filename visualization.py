@@ -467,15 +467,15 @@ def show_counterfactual_explanation(n_neighbors=5, weights='uniform',
 
 #region dice
 def show_DiCE_visualization(sample_id=0, no_CFs = 4, desired_class="opposite",
-                            stopping_threshold = 0.5, posthoc_sparsity_param = 0.1, 
-                            posthoc_sparsity_algorithm = "linear"):
+                            proximity_weight = 0.5, diversity_weight = 1.0, 
+                            yloss_type='hinge_loss', diversity_loss_type='dpp_style:inverse_dist'):
     global global_dice
     global dice_preditions
     # if global_dice == None:
     global_dice = dice.get_counterfactual_explainer()
     dice_preditions = dice.get_counterfactual_explanation(x_test=x_test, explainer=global_dice, sample_id=sample_id, no_CFs=no_CFs, desired_class=desired_class,
-                                                            stopping_threshold = stopping_threshold, posthoc_sparsity_param = posthoc_sparsity_param, 
-                                                            posthoc_sparsity_algorithm = posthoc_sparsity_algorithm)
+                                                            proximity_weight = proximity_weight, diversity_weight = diversity_weight, 
+                                                            yloss_type='hinge_loss', diversity_loss_type='dpp_style:inverse_dist')
 
     cfs = dice.get_cfs_df(dice_preditions, x_test, y_test, sample_id)
     
@@ -485,7 +485,7 @@ def show_DiCE_visualization(sample_id=0, no_CFs = 4, desired_class="opposite",
 #region shap
 def show_DeepSHAP_visualization(sample_id=0, ranked_outputs=None, output_rank_order="max"):
     # get predictions
-    classifier = deeps.get_shap_deep_explainer(x_train)
+    classifier = deeps.get_shap_deep_explainer(x_test)
     shap_explanation = deeps.get_all_shap_results(x_test, classifier)
 
     shap_barplot_vals_0, shap_barplot_vals_1 = deeps.get_barplot_values(shap_explanation, sample_id)
@@ -748,17 +748,17 @@ def dash_set_layout():
             html.Div("Anzahl zu berechnender Counterfactuals"),
             dcc.Slider(id='no_CFs', value=4,
                         max=20, min=1, step=1, marks = marks_to_20),
-            html.Div("Threshold für Berechnungsende"),
-            dcc.Slider(id='stopping_threshold', value=0.5,
-                        max=1, min=0, step=0.001, marks = marks_to_1),
-            html.Div("Posthoc Parameter"),
-            dcc.Slider(id='posthoc_sparsity_param', value=0.1,
-                        max=1, min=0, step=0.001, marks = marks_to_1),
+            html.Div("Nähe zum Datenpunkt (je höher desto näher)"),
+            dcc.Slider(id='proximityweight', value=0.5,
+                        max=10, min=0, step=0.1, marks = marks_to_10),
+            html.Div("Diversität der CFs (je höher desto diverser)"),
+            dcc.Slider(id='diversity_weight', value=0.1,
+                        max=10, min=0, step=0.1, marks = marks_to_10),
             html.Button(id='submit_button_dice', children='submit'),
             html.Div("Gewünschte Klasse der Counterfactuals"),
             dcc.RadioItems(id='desired_class', options=[{'label':'Gegenteil der aktuellen', 'value':'opposite'}, {'label':'Aktuelle Klasse', 'value':'same'}], value='opposite'),
-            html.Div("Posthoc Algorithmus"),
-            dcc.RadioItems(id='posthoc_sparsity_algorithm', options=[{'label':'Linear', 'value':'linear'}, {'label':'Binär', 'value':'binary'}], value='linear'),
+            # html.Div("Posthoc Algorithmus"),
+            # dcc.RadioItems(id='posthoc_sparsity_algorithm', options=[{'label':'Linear', 'value':'linear'}, {'label':'Binär', 'value':'binary'}], value='linear'),
             dash_table.DataTable(
             id='dice',
             columns=[
@@ -910,13 +910,11 @@ def update_cf(n_clicks, selected_datapoint, distance_metric, n_neighbors):
     [Input(component_id='submit_button_dice', component_property='n_clicks')],
     [Input(component_id='datapoint_selection_dropdown', component_property='value')],
     [Input(component_id='desired_class', component_property='value')],
-    [Input(component_id='posthoc_sparsity_algorithm', component_property='value')],
     [State(component_id='no_CFs', component_property='value')],
-    [State(component_id='stopping_threshold', component_property='value')],
-    [State(component_id='posthoc_sparsity_param', component_property='value')])
+    [State(component_id='proximity_weight', component_property='value')],
+    [State(component_id='diversity_weight', component_property='value')])
 def update_dice(n_clicks, selected_datapoint, desired_class,
-                posthoc_sparsity_algorithm, no_CFs,
-                stopping_threshold, posthoc_sparsity_param):
+                no_CFs, proximity_weight, diversity_weight):
     idx = helper.get_id_for_dp(x_test, selected_datapoint)
 
     if desired_class == "same":
@@ -926,9 +924,8 @@ def update_dice(n_clicks, selected_datapoint, desired_class,
     inversed = inversed_num.tolist() + inversed_cat.tolist()
 
     dice_upd = show_DiCE_visualization(idx, no_CFs=no_CFs, desired_class=desired_class,
-                                        stopping_threshold = stopping_threshold, 
-                                        posthoc_sparsity_param = posthoc_sparsity_param, 
-                                        posthoc_sparsity_algorithm = posthoc_sparsity_algorithm)
+                                        proximity_weight = proximity_weight, diversity_weight = diversity_weight, 
+                                        yloss_type='hinge_loss', diversity_loss_type='dpp_style:inverse_dist')
 
     
     df_datapoint = pd.DataFrame([inversed], columns=ds.numerical_variables + ds.categorical_variables)

@@ -24,17 +24,39 @@ def get_counterfactual_explainer():
 
 # Function to get the Counterfactuals
 def get_counterfactual_explanation(x_test, explainer, sample_id = 0, no_CFs = 4, desired_class = "opposite",
-                                    stopping_threshold = 0.5, posthoc_sparsity_param = 0.1, 
-                                    posthoc_sparsity_algorithm = "linear"):
+                                    proximity_weight = 0.5, diversity_weight = 1.0, 
+                                    yloss_type='hinge_loss', diversity_loss_type='dpp_style:inverse_dist'):
     # new_vals_num, new_vals_cat = helper.inverse_preprocessing(ds, x_test, sample_id)
     # new_vals_whole = np.hstack([new_vals_num, new_vals_cat])
     # datapoint_dict = dict(zip(ds.column_names, new_vals_whole))
     # print(datapoint_dict)
     datapoint_dict = dict(zip(ds.cols_onehot, x_test[sample_id][0:-2].numpy()))
-
+    #region var erklärungen
+# proximity_weight=0.5, --> je größer, destho näher am Datenpunkt
+# diversity_weight=1.0, --> je größer, desto diverser die CFs
+# categorical_penalty=0.1, --> raus lassen?
+# algorithm="DiverseCF", --> raus lassen?
+# features_to_vary="all", --> begrenzt Feature, die verändert werden dürfen
+# yloss_type="hinge_loss", --> l2 / log / hinge --> Funktion für yloss (hinge)
+# diversity_loss_type="dpp_style:inverse_dist", --> avg / dpp inverse --> Funktion für dpp_diversity (dpp)
+# feature_weights="inverse_mad", --> 1/MAD raus lassen? 
+# optimizer="pytorch:adam", --> raus lassen
+# learning_rate=0.05, --> raus lassen (learning rate für gewählten optimizer)
+# min_iter=500, --> min grad desc Iterationen
+# max_iter=5000, --> max grad desc Iterationen
+# project_iter=0, ??? --> raus lassen
+# loss_diff_thres=1e-5, --> minimaler Unterschied, den zwei aufeinanderfolgende Loss-Werte haben dürfen (abbruchkriterium) raus lassen?
+# loss_converge_maxiter=1, --> maximale Anzahl Iterationen bevor mit loss diff threshold konvergiert
+# verbose=False, --> nur training
+# init_near_query_instance=True, --> initialisieren nah am Datenpunkt
+# tie_random=False, --> rauslassen
+# stopping_threshold=0.5, --> Threshold der Wahrscheinlichkeit einer Klassenvorhersage für ein CF
+# posthoc_sparsity_param=0.1, --> 
+# posthoc_sparsity_algorithm="linear"
+#endregion
     dice_exp = explainer.generate_counterfactuals(datapoint_dict, total_CFs=no_CFs, desired_class=desired_class,
-                                                    stopping_threshold = stopping_threshold, posthoc_sparsity_param = posthoc_sparsity_param, 
-                                                    posthoc_sparsity_algorithm = posthoc_sparsity_algorithm)
+                                                    proximity_weight = proximity_weight, diversity_weight = diversity_weight, 
+                                                    yloss_type=yloss_type, diversity_loss_type=diversity_loss_type)
     return dice_exp
 
 

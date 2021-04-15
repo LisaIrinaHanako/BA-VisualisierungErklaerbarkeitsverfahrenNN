@@ -32,11 +32,11 @@ def calc_gower_distance(x_test, sample_id=0):
     sample_row = dist_matrix[sample_id]
 
     min_dist = dist_matrix[sample_row == min(sample_row[sample_row != min(sample_row)])]
-    print("gower shape für samlpe: ", sample_row.shape)
-    print("datenpunkt mit min gower Distanz für sample_id", min_dist)
+    # print("gower shape für samlpe: ", sample_row.shape)
+    # print("datenpunkt mit min gower Distanz für sample_id", min_dist)
 
     min_ind = [sample_row == min(sample_row[sample_row != min(sample_row)])]
-    print(min_ind)
+    # print(min_ind)
     return min_dist, min_ind
 
 
@@ -55,15 +55,18 @@ def get_classifier_and_predictions(n_neighbors=5, weights='uniform',
     if distance_metric == "gower": #gower
         df = pd.DataFrame(x_test)
         classifier = calc_knn_classifier(x_train, x_test, y_train, y_test,
-                                            n_neighbors, weights, algorithm,
-                                            leaf_size, p, gower.gower_matrix, metric_params=df)
+                                            n_neighbors=n_neighbors, weights=weights, algorithm=algorithm,
+                                            leaf_size=leaf_size, p=p, 
+                                            metric=gower.gower_matrix, metric_params=None)#{"data_x":df})
     #    neigh_dist, neigh_ind = calc_gower_distance(x_test, 0)
+        neigh_dist, neigh_ind = classifier.kneighbors(df, n_neighbors, return_distance=True)
     else: 
         # calculate actual classifier result
         classifier = calc_knn_classifier(x_train, x_test, y_train, y_test,
                                             n_neighbors, weights, algorithm,
                                             leaf_size, p, metric, metric_params)
-    neigh_dist, neigh_ind = classifier.kneighbors(x_test[sample_id].reshape(1,-1), n_neighbors, return_distance=True)
+
+        neigh_dist, neigh_ind = classifier.kneighbors(x_test[sample_id].reshape(1,-1), n_neighbors, return_distance=True)
 
     print(neigh_dist, neigh_ind)
     return neigh_dist, neigh_ind
@@ -107,7 +110,7 @@ def get_cf_min_dist(neigh_dist, neigh_ind, n_neighbors, x_test, y_test, x_train,
 
 def get_cfs_df(all_cfs, x_test, y_test, sample_id = 0):
     inv_num, inv_cat = helper.inverse_preprocessing(ds, x_test, sample_id)
-    test_dp = inv_cat.tolist() + inv_num.tolist()
+    test_dp =  inv_num.tolist() + inv_cat.tolist()
     newdf = []
     # test_dp.append(y_test[sample_id])
     for i,cf in enumerate(all_cfs):
@@ -128,17 +131,22 @@ def main():
     x_test, y_test, x_train, y_train, y_net_test, y_net_train = helper.get_samples_and_labels(ds, clf)
     
     # get predictions 
-    neigh_dist, neigh_ind = get_classifier_and_predictions()
+    calc_gower_distance(x_test, sample_id=0)
+    print("first")
+    neigh_dist, neigh_ind = get_classifier_and_predictions(n_neighbors=5, weights='uniform',
+                                   algorithm='auto', leaf_size=30, p=2,
+                                   metric='euclidean', metric_params=None,
+                                   sample_id=0, distance_metric = "gower")
     n_neighbors = 4
-    print(neigh_dist)
-    print(neigh_ind)
+    # print(neigh_dist)
+    # print(neigh_ind)
 
     actual_cf, min_dist = get_cf_min_dist(neigh_dist, neigh_ind, n_neighbors, x_test, y_test, x_train, y_train)
-    print(actual_cf)
-    print(min_dist)
+    # print(actual_cf)
+    # print(min_dist)
 
+    print("second")
     print(get_cfs_df(actual_cf,x_test,y_test))
-
 
 # Calling main function 
 if __name__=="__main__": 

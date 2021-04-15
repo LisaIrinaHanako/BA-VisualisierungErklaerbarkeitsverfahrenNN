@@ -59,12 +59,24 @@ def main():
     x_test, y_test, x_train, y_train, y_net_test, y_net_train = helper.get_samples_and_labels(ds, clf)
     
     # get predictions 
-    classifier = get_shap_deep_explainer(x_train)
-    shap_explanation = get_shap_explanation(x_test, classifier)
+    classifier = get_shap_deep_explainer(x_test)
+    shap_explanation_1 = get_all_shap_results(x_test, classifier)
     # shap.plots.bar(shap_explanation[0], show=True)
 
     # print(classifier())
-    # print(shap_explanation)
+    # print(shap_explanation_1)
+    # shap_explanation_2 = get_all_shap_results(x_test, classifier)
+    # print(shap_explanation_2)
+
+    # equal = True
+    # for i, var in enumerate(shap_explanation_1):
+    #     for j, val in enumerate(shap_explanation_1[i]):
+    #         for k, n in enumerate(shap_explanation_1[i][j]):
+    #             if n != shap_explanation_2[i][j][k]:
+    #                 equal = False
+    #                 break
+
+    # print(equal)
     
 # Calling main function 
 if __name__=="__main__": 
