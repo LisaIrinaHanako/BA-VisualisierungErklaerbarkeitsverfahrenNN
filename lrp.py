@@ -50,7 +50,7 @@ def lrp_backward(L, layers, A, y_test_net, sample_id=0, type = "gamma"):
     for l in range(1,L)[::-1]:
         A[l] = (A[l].data).requires_grad_(True)
         # brauche ich hier noch mehr Layer-Abfragen? 
-        if isinstance(layers[l],torch.nn.Linear):
+        if isinstance(layers[l],torch.nn.Linear) or isinstance(layers[l],torch.nn.ReLU):
             # ausprobieren?
             # LRP-Epsilon
             if type == "epsilon":
@@ -159,7 +159,7 @@ def main():
     for t in R:
         print(sum(list(t)))
 
-    get_inversed_lrp_first_layer(R)
+    # get_inversed_lrp_first_layer(R)
 
     
 # Calling main function 
