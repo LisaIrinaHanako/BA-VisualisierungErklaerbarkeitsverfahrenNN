@@ -40,6 +40,7 @@ from interactive_ba_preparation_master.dataset import German_Credit
 # Get pretrained PyTorch model and dataset
 #region global Variables
 clf = load_model(path="./interactive_ba_preparation_master/net.pth")
+clf = clf.eval()
 ds = German_Credit(path="./interactive_ba_preparation_master/german.data")
 app = dash.Dash()
 
@@ -207,7 +208,7 @@ def create_and_get_tree(node_index, feature, x_test, threshold, datapoint_index,
             zeroline=True,
             showgrid=False,
             showticklabels=True,
-            range = (-100*level -2, 2))
+            autorange=True)
 
     fig = go.Figure()
     dt_edges = go.Scatter(x=edge_x_pos,
@@ -667,10 +668,10 @@ def dash_set_layout():
                         max=100, min=1, step=1, marks = marks_to_100),
             html.Div("Minimale Unreinheitsänderung"),
             dcc.Slider(id='min_impurity_decrease_dt', value=0.0,
-                        max=100, min=0.0, step=1, marks = marks_to_100),
-            html.Div("Minimale Unreinheit für Split"),
-            dcc.Slider(id='min_impurity_split_dt', value=0.0,
-                        max=100, min=0.0, step=1, marks = marks_to_100),
+                        max=1, min=0.0, step=1e-3, marks = marks_to_1),
+            # html.Div("Minimale Unreinheit für Split"),
+            # dcc.Slider(id='min_impurity_split_dt', value=0.0,
+            #             max=100, min=0.0, step=1, marks = marks_to_100),
             html.Div("Pruning"),
             dcc.Slider(id='ccp_alpha_dt', value=0.0,
                         max=100, min=0.0, step=1, marks = marks_to_100),
@@ -682,15 +683,15 @@ def dash_set_layout():
             html.Div("Maximale Anzahl Feature im Blatt"),
             dcc.RadioItems(id='max_features_dt', options=[{'label':'Auto', 'value':'auto'}, {'label':'Wurzel', 'value':'sqrt'}, {'label':'Logarithmus', 'value':'log2'}], value='auto'),
             html.Div(id='dt-accuracy'),
-            dcc.Graph(id = 'DT-Graph', figure = show_decision_tree_path(0)),
+            dcc.Graph(id = 'DT-Graph', figure = show_decision_tree_path(0), animate=False),
             html.Div(id='dt-text')
         ]),
         html.Br(),
         #endregion
         #region Linear Modell- Bereich
         html.Div([
-            html.Div("Dual? (sonst Primal)"), html.Div(id='dual_output'),
-            daq.BooleanSwitch(id='dual', on=False),
+            # html.Div("Dual? (sonst Primal)"), html.Div(id='dual_output'),
+            # daq.BooleanSwitch(id='dual', on=False),
             html.Div("Toleranz"),
             dcc.Slider(id='tol', value=1e-4,
                         max=1, min=0, step=1e-5, marks = marks_to_1),
@@ -749,7 +750,7 @@ def dash_set_layout():
             dcc.Slider(id='no_CFs', value=4,
                         max=20, min=1, step=1, marks = marks_to_20),
             html.Div("Nähe zum Datenpunkt (je höher desto näher)"),
-            dcc.Slider(id='proximityweight', value=0.5,
+            dcc.Slider(id='proximity_weight', value=0.5,
                         max=10, min=0, step=0.1, marks = marks_to_10),
             html.Div("Diversität der CFs (je höher desto diverser)"),
             dcc.Slider(id='diversity_weight', value=0.1,
@@ -822,16 +823,15 @@ def update_dp(selected_datapoint):
     [Input(component_id='impurity_criterion', component_property='value')],
     [Input(component_id='splitter_dt', component_property='value')],
     [Input(component_id='max_features_dt', component_property='value')],
-    [State(component_id='input_dt_depth', component_property='value')],
-    [State(component_id='min_samples_split_dt', component_property='value')],
-    [State(component_id='min_smp_lf_dt', component_property='value')],
-    [State(component_id='max_leaf_nodes_dt', component_property='value')],
-    [State(component_id='min_impurity_decrease_dt', component_property='value')],
-    [State(component_id='min_impurity_split_dt', component_property='value')],
-    [State(component_id='ccp_alpha_dt', component_property='value')])
+    [Input(component_id='input_dt_depth', component_property='value')],
+    [Input(component_id='min_samples_split_dt', component_property='value')],
+    [Input(component_id='min_smp_lf_dt', component_property='value')],
+    [Input(component_id='max_leaf_nodes_dt', component_property='value')],
+    [Input(component_id='min_impurity_decrease_dt', component_property='value')],
+    [Input(component_id='ccp_alpha_dt', component_property='value')])
 def update_dt_depth(n_clicks, selected_datapoint, criterion, splitter,
                     max_features, dt_depth, min_samples_split, min_smp_lf,
-                    max_leaf_nodes, min_impurity_decrease, min_impurity_split,
+                    max_leaf_nodes, min_impurity_decrease,
                     ccp_alpha):
     global global_dp_selection_index
     idx = helper.get_id_for_dp(x_test, selected_datapoint)
@@ -841,7 +841,7 @@ def update_dt_depth(n_clicks, selected_datapoint, criterion, splitter,
                                             min_samples_split=min_samples_split, min_smp_lf=min_smp_lf,
                                             max_features=max_features,
                                             max_leaf_nodes=max_leaf_nodes, min_impurity_decrease=min_impurity_decrease,
-                                            min_impurity_split=min_impurity_split,ccp_alpha=0)
+                                            ccp_alpha=0)
     global_dp_selection_index = idx
 
     accuracy = "Genauigkeit: {acc}".format(acc=accuracy)
@@ -857,12 +857,11 @@ def update_dt_depth(n_clicks, selected_datapoint, criterion, splitter,
     [Input(component_id='datapoint_selection_dropdown', component_property='value')],
     [Input(component_id='penalty', component_property='on')],
     [Input(component_id='tol', component_property='value')],
-    [State(component_id='fit_intercept', component_property='on')],
-    [State(component_id='dual', component_property='on')],
-    [State(component_id='C', component_property='value')],
-    [State(component_id='max_iter', component_property='value')])
+    [Input(component_id='fit_intercept', component_property='on')],
+    [Input(component_id='C', component_property='value')],
+    [Input(component_id='max_iter', component_property='value')])
 def update_lin(n_clicks, selected_datapoint, penalty, tol,
-                fit_intercept, dual, C, max_iter):
+                fit_intercept, C, max_iter):
     idx = helper.get_id_for_dp(x_test, selected_datapoint)
     
     if penalty:
@@ -870,7 +869,7 @@ def update_lin(n_clicks, selected_datapoint, penalty, tol,
     else:
         penalty = "none"
     
-    lin_upd, accuracy= show_linear_model_both_in_one(idx, penalty, dual, tol,
+    lin_upd, accuracy= show_linear_model_both_in_one(idx, penalty, tol,
                                                         C, fit_intercept, max_iter)
     print("Linear Model Callback")
 
@@ -884,7 +883,7 @@ def update_lin(n_clicks, selected_datapoint, penalty, tol,
     [Input(component_id='submit_button_cf', component_property='n_clicks')],
     [Input(component_id='datapoint_selection_dropdown', component_property='value')],
     [Input(component_id='distance_metric', component_property='value')],
-    [State(component_id='n_neighbors', component_property='value')])
+    [Input(component_id='n_neighbors', component_property='value')])
 def update_cf(n_clicks, selected_datapoint, distance_metric, n_neighbors):
     idx = helper.get_id_for_dp(x_test, selected_datapoint)
 
@@ -910,9 +909,9 @@ def update_cf(n_clicks, selected_datapoint, distance_metric, n_neighbors):
     [Input(component_id='submit_button_dice', component_property='n_clicks')],
     [Input(component_id='datapoint_selection_dropdown', component_property='value')],
     [Input(component_id='desired_class', component_property='value')],
-    [State(component_id='no_CFs', component_property='value')],
-    [State(component_id='proximity_weight', component_property='value')],
-    [State(component_id='diversity_weight', component_property='value')])
+    [Input(component_id='no_CFs', component_property='value')],
+    [Input(component_id='proximity_weight', component_property='value')],
+    [Input(component_id='diversity_weight', component_property='value')])
 def update_dice(n_clicks, selected_datapoint, desired_class,
                 no_CFs, proximity_weight, diversity_weight):
     idx = helper.get_id_for_dp(x_test, selected_datapoint)
