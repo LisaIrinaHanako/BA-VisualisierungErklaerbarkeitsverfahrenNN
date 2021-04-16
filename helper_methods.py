@@ -81,6 +81,10 @@ def inverse_preprocessing_single(ds, datapoint):
 
 # TODO
 def get_id_for_dp(x_test, dp):
+    # print(x_test[0] == dp)
+    # print(dp)
+    if not isinstance(dp, list):
+        dp = dp.tolist()
     idx = x_test.tolist().index(dp)
     return idx
 

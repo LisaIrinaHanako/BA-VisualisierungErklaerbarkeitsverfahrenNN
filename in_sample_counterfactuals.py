@@ -14,6 +14,8 @@ from interactive_ba_preparation_master.dataset import German_Credit
 clf = load_model(path="./interactive_ba_preparation_master/net.pth")
 ds = German_Credit(path="./interactive_ba_preparation_master/german.data")
 
+global_gower_matrix = None
+
 # Function to calculate LogisticRegression
 def calc_knn_classifier(x_train, x_test, y_train, y_test,
                     n_neighbors, weights, algorithm,
@@ -21,17 +23,19 @@ def calc_knn_classifier(x_train, x_test, y_train, y_test,
     
     classifier = knn(n_neighbors=n_neighbors, weights=weights, algorithm=algorithm,
                     leaf_size=leaf_size, p=p, metric=metric, metric_params=metric_params) 
-    classifier.fit(x_train, np.array(y_train)) 
+    classifier.fit(x_test, np.array(y_test).reshape(len(y_test),)) 
     return classifier 
 
 # Funktion um Gower Distanz zu berechnen
 def calc_gower_distance(x_test, sample_id=0):
+    global global_gower_matrix
+    if global_gower_matrix is None:
+        df = pd.DataFrame(x_test)
+        global_gower_matrix = gower.gower_matrix(df)
     
-    df = pd.DataFrame(x_test)
-    dist_matrix = gower.gower_matrix(df)
-    sample_row = dist_matrix[sample_id]
+    sample_row = global_gower_matrix[sample_id]
 
-    min_dist = dist_matrix[sample_row == min(sample_row[sample_row != min(sample_row)])]
+    min_dist = global_gower_matrix[sample_row == min(sample_row[sample_row != min(sample_row)])]
     # print("gower shape für samlpe: ", sample_row.shape)
     # print("datenpunkt mit min gower Distanz für sample_id", min_dist)
 
@@ -45,30 +49,49 @@ def get_columns_and_coeff():
     classifier, predictions = get_classifier_and_predictions()
     return ds.cols_onehot, classifier.coef_
 
+def call_gower_single(X,Y):
+    x_test, y_test, x_train, y_train, y_net_test, y_net_train = helper.get_samples_and_labels(ds, clf)
+    
+    global global_gower_matrix
+    if global_gower_matrix is None:
+        df = pd.DataFrame(x_test)
+        global_gower_matrix = gower.gower_matrix(df)
+
+    sample_id_x = helper.get_id_for_dp(x_test, torch.tensor(X))
+    sample_id_y = helper.get_id_for_dp(x_test, torch.tensor(Y))
+    # sample_id_x=0
+    # sample_id_y=0
+    sample_row = global_gower_matrix[sample_id_x][sample_id_y]
+
+    return sample_row
+
 # Funktion um Classifier und Predictions zu bestimmen
 def get_classifier_and_predictions(n_neighbors=5, weights='uniform',
                                    algorithm='auto', leaf_size=30, p=2,
                                    metric='euclidean', metric_params=None,
                                    sample_id=0, distance_metric = "euclidean"):
-    
+    global global_gower_matrix
     x_test, y_test, x_train, y_train, y_net_test, y_net_train = helper.get_samples_and_labels(ds, clf)
+
+    if global_gower_matrix is None:
+        df = pd.DataFrame(x_test)
+        global_gower_matrix = gower.gower_matrix(df)
+
     if distance_metric == "gower": #gower
         df = pd.DataFrame(x_test)
+        df = {'test': df}
         classifier = calc_knn_classifier(x_train, x_test, y_train, y_test,
                                             n_neighbors=n_neighbors, weights=weights, algorithm=algorithm,
                                             leaf_size=leaf_size, p=p, 
-                                            metric=gower.gower_matrix, metric_params=None)#{"data_x":df})
-    #    neigh_dist, neigh_ind = calc_gower_distance(x_test, 0)
-        neigh_dist, neigh_ind = classifier.kneighbors(df, n_neighbors, return_distance=True)
+                                            metric=call_gower_single, metric_params=None)#{"data_x":df})
     else: 
         # calculate actual classifier result
         classifier = calc_knn_classifier(x_train, x_test, y_train, y_test,
                                             n_neighbors, weights, algorithm,
                                             leaf_size, p, metric, metric_params)
 
-        neigh_dist, neigh_ind = classifier.kneighbors(x_test[sample_id].reshape(1,-1), n_neighbors, return_distance=True)
+    neigh_dist, neigh_ind = classifier.kneighbors(x_test[sample_id].reshape(1,-1), n_neighbors, return_distance=True)
 
-    print(neigh_dist, neigh_ind)
     return neigh_dist, neigh_ind
 
 def get_cf_min_dist(neigh_dist, neigh_ind, n_neighbors, x_test, y_test, x_train, y_train, sample_id=0):
@@ -131,8 +154,8 @@ def main():
     x_test, y_test, x_train, y_train, y_net_test, y_net_train = helper.get_samples_and_labels(ds, clf)
     
     # get predictions 
-    calc_gower_distance(x_test, sample_id=0)
-    print("first")
+    # calc_gower_distance(x_test, sample_id=0)
+    # print("first")
     neigh_dist, neigh_ind = get_classifier_and_predictions(n_neighbors=5, weights='uniform',
                                    algorithm='auto', leaf_size=30, p=2,
                                    metric='euclidean', metric_params=None,

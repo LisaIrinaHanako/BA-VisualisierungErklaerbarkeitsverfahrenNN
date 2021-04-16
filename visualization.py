@@ -782,10 +782,10 @@ def dash_set_layout():
         #endregion
         #region Lrp
         html.Div([
-            html.Div("Schicht, die angezeigt werden soll"),
-            dcc.Slider(id='layer', value=0,
-                        max=4, min=0, step=1, marks = marks_to_5),
-            html.Button(id='submit_button_lrp', children='submit'),
+            # html.Div("Schicht, die angezeigt werden soll"),
+            # dcc.Slider(id='layer', value=0,
+            #             max=4, min=0, step=1, marks = marks_to_5),
+            # html.Button(id='submit_button_lrp', children='submit'),
             html.Div("LRP-Regel für Berechnung der hidden-layer Relevanzen"),
             dcc.RadioItems(id='lrp_type', options=[{'label':'LRP-Gamma', 'value':'gamma'}, {'label':'LRP-Epsilon', 'value':'epsilon'}, {'label':'LRP-0', 'value':'0'}], value='gamma'),
             dcc.Graph(id = 'LRP', figure = show_lrp_visualization(0,0))
@@ -952,14 +952,12 @@ def update_ds(selected_datapoint):
 
 @app.callback(
     Output(component_id='LRP', component_property='figure'),
-    [Input(component_id='submit_button_lrp', component_property='n_clicks')],
     [Input(component_id='datapoint_selection_dropdown', component_property='value')],
-    [Input(component_id='lrp_type', component_property='value')],
-    [State(component_id='layer', component_property='value')])
-def update_lrp(n_clicks, selected_datapoint, lrp_type, layer):
+    [Input(component_id='lrp_type', component_property='value')])
+def update_lrp(selected_datapoint, lrp_type):
     idx = helper.get_id_for_dp(x_test, selected_datapoint)
 
-    lrp_upd = show_lrp_visualization(layer,idx, lrp_type)
+    lrp_upd = show_lrp_visualization(0,idx, lrp_type)
     print("lrp Callback")
     return lrp_upd
 
