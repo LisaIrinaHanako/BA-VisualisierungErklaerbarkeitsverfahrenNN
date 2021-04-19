@@ -13,38 +13,86 @@ from interactive_ba_preparation_master.dataset import German_Credit
 clf = load_model(path="./interactive_ba_preparation_master/net.pth")
 ds = German_Credit(path="./interactive_ba_preparation_master/german.data")
 
+global_selected_datapoint = 0
+global_criterion = 'gini'
+global_splitter = 'best'
+global_max_features = None
+global_dt_depth = 8
+global_min_samples_split = 1
+global_min_smp_lf = 0
+global_max_leaf_nodes = None
+global_ccp_alpha = 0
+global_classifier = None
+
 # Function to calculate DecisionTreeClassifier
-def calc_classifier(x_train, x_test, y_train, y_test, criterion, 
-                    splitter='gini', max_depth=8, min_samples_split=1, min_smp_lf=0,
+def calc_classifier(x_train, x_test, y_train, y_test, criterion='gini', 
+                    splitter='best', max_depth=8, min_samples_split=1, min_smp_lf=0,
                     max_features=None, max_leaf_nodes=None, min_impurity_decrease=0,
                     min_impurity_split=0,ccp_alpha=0):
-    
-    classifier = DecisionTreeClassifier(
-            criterion = criterion, splitter=splitter, 
-            max_depth = max_depth, min_samples_split=min_samples_split,
-            min_samples_leaf=min_smp_lf, max_features=max_features,
-            max_leaf_nodes=max_leaf_nodes,
-            min_impurity_decrease=min_impurity_decrease,
-            min_impurity_split=min_impurity_split, ccp_alpha=ccp_alpha)
-    # Performing classification 
-    classifier.fit(x_train, y_train) 
-    return classifier 
+    global global_criterion
+    global global_splitter
+    global global_max_features
+    global global_dt_depth
+    global global_min_samples_split
+    global global_min_smp_lf
+    global global_max_leaf_nodes
+    global global_ccp_alpha
+    global global_classifier
 
-def get_classifier(idx, criterion, splitter='gini', max_depth=8,
+    if(global_criterion != criterion or
+        global_splitter != splitter or
+        global_max_features != max_features or
+        global_dt_depth != max_depth or
+        global_min_samples_split != min_samples_split or
+        global_min_smp_lf != min_smp_lf or
+        global_max_leaf_nodes != max_leaf_nodes or
+        global_ccp_alpha != ccp_alpha or
+        global_classifier == None):
+        global_classifier = DecisionTreeClassifier(criterion = criterion, splitter=splitter, 
+                                            max_depth = max_depth, min_samples_split=min_samples_split,
+                                            min_samples_leaf=min_smp_lf, max_features=max_features,
+                                            max_leaf_nodes=max_leaf_nodes,
+                                            min_impurity_decrease=min_impurity_decrease,
+                                            min_impurity_split=min_impurity_split, ccp_alpha=ccp_alpha)
+        # Performing classification 
+        global_classifier.fit(x_train, y_train) 
+    return global_classifier 
+
+def get_classifier(idx, criterion='gini', splitter='best', max_depth=8,
                             min_samples_split=1, min_smp_lf=0,
                             max_features=None,
                             max_leaf_nodes=None, min_impurity_decrease=0,
                             min_impurity_split=0,ccp_alpha=0):
-    x_test, y_test, x_train, y_train, y_net_test, y_net_train = helper.get_samples_and_labels(ds, clf)
 
-    classifier = calc_classifier(x_train, x_test, y_net_train, y_test,
-                                criterion = criterion, splitter=splitter, 
-                                max_depth = max_depth, min_samples_split=min_samples_split,
-                                min_smp_lf=min_smp_lf, max_features=max_features,
-                                max_leaf_nodes=max_leaf_nodes,
-                                min_impurity_decrease=min_impurity_decrease,
-                                min_impurity_split=min_impurity_split, ccp_alpha=ccp_alpha)
-    return classifier
+    global global_criterion
+    global global_splitter
+    global global_max_features
+    global global_dt_depth
+    global global_min_samples_split
+    global global_min_smp_lf
+    global global_max_leaf_nodes
+    global global_ccp_alpha
+    global global_classifier
+
+    if(global_criterion != criterion or
+        global_splitter != splitter or
+        global_max_features != max_features or
+        global_dt_depth != max_depth or
+        global_min_samples_split != min_samples_split or
+        global_min_smp_lf != min_smp_lf or
+        global_max_leaf_nodes != max_leaf_nodes or
+        global_ccp_alpha != ccp_alpha or
+        global_classifier == None):
+        x_test, y_test, x_train, y_train, y_net_test, y_net_train = helper.get_samples_and_labels(ds, clf)
+
+        global_classifier = calc_classifier(x_train, x_test, y_net_train, y_test,
+                                            criterion = criterion, splitter=splitter, 
+                                            max_depth = max_depth, min_samples_split=min_samples_split,
+                                            min_smp_lf=min_smp_lf, max_features=max_features,
+                                            max_leaf_nodes=max_leaf_nodes,
+                                            min_impurity_decrease=min_impurity_decrease,
+                                            min_impurity_split=min_impurity_split, ccp_alpha=ccp_alpha)
+    return global_classifier
 
 # Function to plot whole DecisionTree
 def plot_result_tree(classification_results, feature_names_count):

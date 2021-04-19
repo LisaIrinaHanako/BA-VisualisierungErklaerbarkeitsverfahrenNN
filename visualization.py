@@ -57,6 +57,7 @@ dice_preditions = None
 global_shap = None
 global_lrp = None
 global_dp_selection_index = None
+global_dp_df = pd.DataFrame()
 #endregion
 
 #region Decision Tree
@@ -595,15 +596,79 @@ def show_dt_lm():
     plot(fig)
 #endregion
 
+#region Datapoints
+def create_datapoint_overview():
+    global global_dp_df
+
+    if global_dp_df.empty:
+        cat_names_val = ds.categorical_variables
+        cats = ds.categories
+        num_names_val = ds.numerical_variables
+
+        max_name_val = dict(zip(num_names_val, [0]*len(num_names_val))) 
+        min_name_val = dict(zip(num_names_val, [9999999999]*len(num_names_val)))
+        sum_name_val = dict(zip(num_names_val, [0]*len(num_names_val)))
+
+        test_list = []
+        count = 0
+        cat_name_val_dict = dict()
+        for category_list in cats:
+            temp_dict = dict(zip(category_list, [0]*len(cats)))
+            temp = cat_names_val[count]
+            cat_name_val_dict[temp] = temp_dict
+            count += 1
+
+        for dp in x_test:
+            inversed_num, inversed_cat = helper.inverse_preprocessing_single(ds, dp)
+            num_name_val_pair = zip(num_names_val, inversed_num.tolist())
+            cat_name_val_pair = zip(cat_names_val, inversed_cat.tolist())
+
+            for name,val in num_name_val_pair:
+                cur_max = max_name_val[name]
+                if val > cur_max:
+                    max_name_val[name] = val 
+                cur_min = min_name_val[name]
+                if val < cur_min:
+                    min_name_val[name] = val 
+                sum_name_val[name] = sum_name_val[name] + val
+
+            for i, (name, val) in enumerate(cat_name_val_pair):
+                for actual in cats[i]:
+                    if actual == val:
+                        cur_cat = cat_name_val_dict[name]
+                        cat_name_val_dict[name][actual] = cur_cat[actual] +1
+            
+
+        max_for_features = [x for x in max_name_val.values()] + ['']*len(cat_names_val)
+        min_for_features = [x for x in min_name_val.values()] + ['']*len(cat_names_val)
+        avg_for_features = [x/len(x_test) for x in sum_name_val.values()] + ['']*len(cat_names_val)
+
+        max_cat_list = []
+        for val in cat_name_val_dict.values():
+            max_cat_list.append(max(val, key=val.get))
+        cat_feature_value = ['']*len(num_names_val) + max_cat_list
+
+        selected_dp = pd.DataFrame({"Numerisch: Maximaler Wert":max_for_features})
+        selected_dp.insert(1,"Numerisch: Minimaler Wert", min_for_features, True)
+        selected_dp.insert(2,"Numerisch: Durchschnitt Wert", avg_for_features, True)
+        selected_dp.insert(3,"Kategorisch: Häufigste Ausprägung", cat_feature_value, True)
+        
+        feature_names = ds.data.columns
+        selected_dp.insert(0,'Eigenschaften',feature_names,True)
+        global_dp_df = selected_dp
+    return global_dp_df
+#endregion
+
 
 def dash_set_layout():
     #region variable preparations
     feature_names = ds.data.columns
 
-    selected_dp = pd.DataFrame({'Eigenschaften':feature_names})
+    selected_dp = create_datapoint_overview()
     inversed_num, inversed_cat = helper.inverse_preprocessing_single(ds, x_test[0])
     inversed = inversed_num.tolist() + inversed_cat.tolist()
     selected_dp.insert(1,"Datenpunkt", inversed, True)
+    
 
     in_sample_cfs = show_counterfactual_explanation()
     df_datapoint = pd.DataFrame([inversed], columns=ds.numerical_variables + ds.categorical_variables)
@@ -802,13 +867,10 @@ def dash_set_layout():
 def update_dp(selected_datapoint):
     print("DP callback")
     idx = helper.get_id_for_dp(x_test, selected_datapoint)
-
-    feature_names = ds.data.columns
-
-    dp_upd = pd.DataFrame({'Eigenschaften':feature_names})
+    dp_upd = create_datapoint_overview()
     inversed_num, inversed_cat = helper.inverse_preprocessing_single(ds, x_test[idx])
     inversed = inversed_num.tolist() + inversed_cat.tolist()
-
+    dp_upd.drop(axis=1, labels="Datenpunkt", inplace=True)
     dp_upd.insert(1,"Datenpunkt", inversed, True)
 
     return dp_upd.to_dict('records')
@@ -827,12 +889,10 @@ def update_dp(selected_datapoint):
     [Input(component_id='min_samples_split_dt', component_property='value')],
     [Input(component_id='min_smp_lf_dt', component_property='value')],
     [Input(component_id='max_leaf_nodes_dt', component_property='value')],
-    [Input(component_id='min_impurity_decrease_dt', component_property='value')],
     [Input(component_id='ccp_alpha_dt', component_property='value')])
 def update_dt_depth(n_clicks, selected_datapoint, criterion, splitter,
                     max_features, dt_depth, min_samples_split, min_smp_lf,
-                    max_leaf_nodes, min_impurity_decrease,
-                    ccp_alpha):
+                    max_leaf_nodes, ccp_alpha):
     global global_dp_selection_index
     idx = helper.get_id_for_dp(x_test, selected_datapoint)
 
@@ -840,7 +900,7 @@ def update_dt_depth(n_clicks, selected_datapoint, criterion, splitter,
     dt_upd, text, accuracy  = show_decision_tree_path(idx, criterion, splitter=splitter, max_depth=dt_depth,
                                             min_samples_split=min_samples_split, min_smp_lf=min_smp_lf,
                                             max_features=max_features,
-                                            max_leaf_nodes=max_leaf_nodes, min_impurity_decrease=min_impurity_decrease,
+                                            max_leaf_nodes=max_leaf_nodes,
                                             ccp_alpha=0)
     global_dp_selection_index = idx
 
@@ -869,8 +929,9 @@ def update_lin(n_clicks, selected_datapoint, penalty, tol,
     else:
         penalty = "none"
     
-    lin_upd, accuracy= show_linear_model_both_in_one(idx, penalty, tol,
-                                                        C, fit_intercept, max_iter)
+    lin_upd, accuracy= show_linear_model_both_in_one(sample_id = idx, penalty=penalty, tol=tol,
+                                                        C=C, fit_intercept=fit_intercept,
+                                                        max_iter=max_iter)
     print("Linear Model Callback")
 
     accuracy = "Genauigkeit: {acc}".format(acc=accuracy)
