@@ -2,6 +2,7 @@
 #region imports
 import pandas as pd
 import numpy as np
+import torch
 import igraph
 from igraph import Graph, EdgeSeq
 # import cufflinks as cfl
@@ -9,6 +10,7 @@ from igraph import Graph, EdgeSeq
 # %matplotlib inline
 import dash
 import dash_daq as daq
+import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 import dash_table
 
@@ -24,7 +26,6 @@ import deep_shap as deeps
 import lrp
 import helper_methods as helper
 
-from plotly.offline import plot
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 
@@ -42,7 +43,8 @@ from interactive_ba_preparation_master.dataset import German_Credit
 clf = load_model(path="./interactive_ba_preparation_master/net.pth")
 clf = clf.eval()
 ds = German_Credit(path="./interactive_ba_preparation_master/german.data")
-app = dash.Dash()
+
+app = dash.Dash(__name__, external_stylesheets = [dbc.themes.BOOTSTRAP])
 
 
 x_test, y_test, x_train, y_train, y_net_test, y_net_train = helper.get_samples_and_labels(ds, clf)
@@ -66,23 +68,21 @@ def show_decision_tree_path(datapoint_index, criterion='gini', splitter='best', 
                             max_features=None,
                             max_leaf_nodes=None, min_impurity_decrease=0,
                             min_impurity_split=0,ccp_alpha=0):
-    global global_dt
-    global global_dp_selection_index
-    if global_dt == None or global_dp_selection_index == datapoint_index:
-        classifier = dt.get_classifier(datapoint_index, criterion = criterion, splitter=splitter,
-                                        max_depth = max_depth, min_samples_split=min_samples_split,
-                                        min_smp_lf=min_smp_lf, max_features=max_features,
-                                        max_leaf_nodes=max_leaf_nodes,
-                                        min_impurity_decrease=min_impurity_decrease,
-                                        min_impurity_split=min_impurity_split, ccp_alpha=ccp_alpha)
-        global_dt = classifier
+    
+    classifier = dt.get_classifier(datapoint_index, criterion = criterion, splitter=splitter,
+                                    max_depth = max_depth, min_samples_split=min_samples_split,
+                                    min_smp_lf=min_smp_lf, max_features=max_features,
+                                    max_leaf_nodes=max_leaf_nodes,
+                                    min_impurity_decrease=min_impurity_decrease,
+                                    min_impurity_split=min_impurity_split, ccp_alpha=ccp_alpha)
+        
 
-    predictions = global_dt.predict(x_test)
+    predictions = classifier.predict(x_test)
 
 
-    feature = global_dt.tree_.feature
-    threshold = global_dt.tree_.threshold
-    node_indicator = global_dt.decision_path(x_test)
+    feature = classifier.tree_.feature
+    threshold = classifier.tree_.threshold
+    node_indicator = classifier.decision_path(x_test)
 
     # obtain ids of the nodes `sample_id` goes through, i.e., row `sample_id`
     node_index = node_indicator.indices[node_indicator.indptr[datapoint_index]:
@@ -117,6 +117,7 @@ def show_decision_tree_text(explanaition_text, node_index, feature, x_test, thre
             feature_name = feature_name_onehot.split(":")[0]
             feature_value = inversed_cat[helper.get_idx_for_feature(feature_name, inversed_cat)]
             feature_value = feature_name_onehot.split(":")[1]
+            thres_inversed = helper.inverse_preprocessing_single_feature(ds, threshold_value, True)
             if (x_test[datapoint_index, feature_id] <= threshold_value):
                 threshold_sign = "!="
             else:
@@ -127,6 +128,7 @@ def show_decision_tree_text(explanaition_text, node_index, feature, x_test, thre
         else:
             feature_name = feature_name_onehot
             feature_value = inversed_num[helper.get_idx_for_feature(feature_name, inversed_num)]
+            thres_inversed = helper.inverse_preprocessing_single_feature(ds, threshold_value, False)
             if (x_test[datapoint_index, feature_id] <= threshold_value):
                 threshold_sign = "<="
             else:
@@ -135,20 +137,21 @@ def show_decision_tree_text(explanaition_text, node_index, feature, x_test, thre
                                     node = node_id, feat_name= feature_name, feat_val=feature_value,
                                     thres_sign=threshold_sign, thres_val= threshold_value)))
 
-        explanaition_text.append(html.Br())
+        # explanaition_text.append(html.Br())
 
 
     explanaition_text.append("\n Daher ist der Datenpunkt {sample} als Klasse {prediction} bestimmt worden.".format(
                             sample = datapoint_index, prediction = pred))
 
-    explanaition_text.append(html.Br())
-    explanaition_text.append(html.Br())
+    # explanaition_text.append(html.Br())
+    # explanaition_text.append(html.Br())
 
     return explanaition_text
 
 def create_and_get_tree(node_index, feature, x_test, threshold, datapoint_index, predictions):
     # create Tree basis G = Graph.Tree(nr_vertices, 2) # 2 stands for children number
     nr_vertices = 2*max(node_index)
+    print("Vertex",nr_vertices)
     children_count = 2
     G = Graph.Tree(nr_vertices, children_count)
     layout_def = G.layout_reingold_tilford(mode="in", root=[0])
@@ -216,7 +219,7 @@ def create_and_get_tree(node_index, feature, x_test, threshold, datapoint_index,
                        y=edge_y_pos,
                        mode='lines',
                        text=edge_labels,
-                       line=dict(color='rgb(210,210,210)', width=2),
+                       line=dict(color='black', width=2),
                        hoverinfo='none'
                        )
     fig.add_trace(dt_edges)
@@ -242,15 +245,14 @@ def create_and_get_tree(node_index, feature, x_test, threshold, datapoint_index,
                       opacity=0.8
                       )
     fig.add_trace(dt_nodes)
-    fig.update_layout(title= "Tree test",
+    fig.update_layout(title= "Entscheidungsbaum",
               annotations=make_annotations(edge_labels, edge_position),
               font_size=12,
               showlegend=False,
-              xaxis=axis,
-              yaxis=axis,
-              margin=dict(l=40, r=40, b=85, t=100),
+              height = 500,
               hovermode='closest',
-              plot_bgcolor='rgb(248,248,248)'
+              plot_bgcolor='lightgray',
+              paper_bgcolor='lightgray'
               )
     return fig, dt_edges, dt_nodes
 
@@ -271,17 +273,49 @@ def get_labels(labels, node_index, feature, x_test, threshold, datapoint_index, 
 def get_edge_labels(labels, node_index, feature, x_test, threshold, datapoint_index):
     for node_id in node_index:
         # check if value of the split feature for sample is below threshold
+        inversed_num, inversed_cat = helper.inverse_preprocessing_single(ds, x_test[datapoint_index])
+        feature_id = feature[node_id]
+        feature_name_onehot = ds.cols_onehot[feature_id]
+        is_cat_feature = feature_name_onehot.__contains__(":")
+        
         feature_value = x_test[datapoint_index, feature[node_id]]
         threshold_value = threshold[node_id]
         threshold_sign = ""
-        if (feature_value <= threshold_value):
-            threshold_sign = " <= "
+
+        if is_cat_feature:
+            feature_name = feature_name_onehot.split(":")[0]
+            feature_value = inversed_cat[helper.get_idx_for_feature(feature_name, inversed_cat)]
+            feature_value = feature_name_onehot.split(":")[1]
+            thres_inversed = helper.inverse_preprocessing_single_feature(ds, threshold_value, True)
+            if (x_test[datapoint_index, feature_id] <= threshold_value):
+                threshold_sign = "!="
+            else:
+                threshold_sign = "="
+            labels.append("{feat_val} {thres_sign} {thres_val}".format(
+                                    feat_val=feature_value,
+                                    thres_sign=threshold_sign, 
+                                    thres_val= threshold_value))
         else:
-            threshold_sign = " > "
-        labels.append("{value} {inequality} {threshold}".format(
-                  value=feature_value,
-                  inequality=threshold_sign,
-                  threshold=threshold[node_id]))
+            feature_name = feature_name_onehot
+            feature_value = inversed_num[helper.get_idx_for_feature(feature_name, inversed_num)]
+            thres_inversed = helper.inverse_preprocessing_single_feature(ds, threshold_value, False)
+            if (x_test[datapoint_index, feature_id] <= threshold_value):
+                threshold_sign = "<="
+            else:
+                threshold_sign = ">"
+            labels.append("{feat_val} {thres_sign} {thres_val}".format(
+                                    feat_val=feature_value,
+                                    thres_sign=threshold_sign, 
+                                    thres_val= threshold_value))
+
+        # if (feature_value <= threshold_value):
+        #     threshold_sign = " <= "
+        # else:
+        #     threshold_sign = " > "
+        # labels.append("{value} {inequality} {threshold}".format(
+        #           value=feature_value,
+        #           inequality=threshold_sign,
+        #           threshold=threshold[node_id]))
     return labels
 
 def get_custom_texts(node_index, feature, x_test, threshold, datapoint_index, position):
@@ -370,7 +404,6 @@ def show_whole_and_specific_linear_model_plot():
     fig.update_layout(legend_title_text = "")
     fig.update_xaxes(title_text="Feature")
     fig.update_yaxes(title_text="Relevanz")
-    # plot(fig)
     return fig
 
 def show_whole_and_specific_linear_model_plot_no_zeros():
@@ -404,7 +437,6 @@ def show_whole_and_specific_linear_model_plot_no_zeros():
     fig.update_layout(legend_title_text = "")
     fig.update_xaxes(title_text="Feature")
     fig.update_yaxes(title_text="Relevanz")
-    # plot(fig)
     return single_fig, whole_fig
 
 def show_linear_model_both_in_one(sample_id = 0, penalty='l2', dual=False, tol=0.0001,
@@ -437,12 +469,9 @@ def show_linear_model_both_in_one(sample_id = 0, penalty='l2', dual=False, tol=0
     fig.add_trace(single_dp_go, row=1, col=1)
     fig.add_trace(whole_go, row=1, col=1)
 
-    fig.update_layout(legend_title_text = "")
+    fig.update_layout(title= "Logistische Regression", legend_title_text = "")
     fig.update_xaxes(title_text="Feature")
     fig.update_yaxes(title_text="Relevanz")
-    # plot(fig)
-    # return fig
-    # return single_dp_go, whole_go
 
     global y_net_test
     accuracy = lin.lin_mod_accuracy(predictions, y_net_test)
@@ -668,7 +697,6 @@ def dash_set_layout():
     inversed_num, inversed_cat = helper.inverse_preprocessing_single(ds, x_test[0])
     inversed = inversed_num.tolist() + inversed_cat.tolist()
     selected_dp.insert(1,"Datenpunkt", inversed, True)
-    
 
     in_sample_cfs = show_counterfactual_explanation()
     df_datapoint = pd.DataFrame([inversed], columns=ds.numerical_variables + ds.categorical_variables)
@@ -679,13 +707,16 @@ def dash_set_layout():
     class0, class1 = show_DeepSHAP_visualization()
     shap_fig.add_trace(class0)
     shap_fig.add_trace(class1)
+    shap_fig.update_layout(
+              plot_bgcolor='lightgray',
+              paper_bgcolor='lightgray')
 
     marks_to_1 = { 0.1*i : "{val}".format(val = helper.round_to_1(0.1*i)) for i in range(10)}
     marks_to_5 = { i : "{val}".format(val = i) for i in range(5)}
     marks_to_10 = { i : "{val}".format(val = i) for i in range(10)}
-    marks_to_20 = { i : "{val}".format(val = i) for i in range(20)}
+    marks_to_20 = { 5*i : "{val}".format(val = 5*i) for i in range(4)}
     marks_to_100 = { 10*i : "{val}".format(val = 10*i) for i in range(10)}
-    marks_to_200 = { 10*i : "{val}".format(val = 10*i) for i in range(20)}
+    marks_to_200 = { 50*i : "{val}".format(val = 50*i) for i in range(4)}
     marks_shap = {10*i: "{val}".format(val=10*i) for i in range(len(x_test[0]))}
     dice_cfs = show_DiCE_visualization()
     df_datapoint = pd.DataFrame([inversed], columns=ds.numerical_variables + ds.categorical_variables)
@@ -697,168 +728,689 @@ def dash_set_layout():
         html.Div(html.H2("Visualisierungen")),
         #region datapoint selection dropdown
         html.Br(),
-        html.Div(dcc.Dropdown(
-            id='datapoint_selection_dropdown',
-            multi=False,
-            clearable=True,
-            options=[{"label":"Datenpunkt {dp}".format(dp=helper.get_id_for_dp(x_test, c.tolist())), "value":c}
-                    for c in x_test],
-            value = x_test[0]
-        )),
-        html.Div(id='dd-output-container'),
+        dbc.Row(
+            [
+                dbc.Col(
+                    html.Div(
+                        dcc.Dropdown(
+                            id='datapoint_selection_dropdown',
+                            multi=False,
+                            clearable=False,
+                            options=[{"label":"Datenpunkt {dp}".format(dp=helper.get_id_for_dp(x_test, c.tolist())), "value":c}
+                                    for c in x_test],
+                            value = x_test[0]
+                        )
+                    ),
+                    width=2
+                ),
         #endregion
         #region datapoint visualization
-        dash_table.DataTable(
-            id='selected-dp',
-            columns=[
-                {"name": i, "id": i, "deletable":False, "selectable":True, "hideable":True}
-                for i in selected_dp.columns
-            ],
-            data=selected_dp.to_dict('records')),
-        html.Br(),
+                dbc.Col(
+                    [
+                        dbc.Button(
+                            "Tabelle ausklappen",
+                            id="collapse-button",
+                            className="mb-3"
+                        ),
+                        dbc.Collapse(
+                            dash_table.DataTable(
+                                id='selected-dp',
+                                columns=[
+                                    {
+                                        "name": i, 
+                                        "id": i, 
+                                        "deletable":False, 
+                                        "selectable":True, 
+                                        "hideable":True
+                                    }
+                                    for i in selected_dp.columns
+                                    ],
+                                data=selected_dp.to_dict('records'),
+                                style_table={
+                                'overflowX': 'scroll'
+                                }
+                            ),
+                            id="collapse"
+                        )
+                    ], width=10
+                )
+            ]
+        ),
         #endregion
         #region DT- Bereich
-        html.Div([
-            html.Div("Tiefe"),
-            dcc.Slider(id='input_dt_depth', value=8,
-                        max=100, min=2, step=1, marks = marks_to_100),
-            html.Div("Anzahl Beispiele für Split"),
-            dcc.Slider(id='min_samples_split_dt', value=2,
-                        max=100, min=2, step=1, marks = marks_to_100),
-            html.Div("Anzahl Beispiele in Blatt"),
-            dcc.Slider(id='min_smp_lf_dt', value=1,
-                        max=100, min=1, step=1, marks = marks_to_100),
-            html.Div("Anzahl Blätter"),
-            dcc.Slider(id='max_leaf_nodes_dt', value=None,
-                        max=100, min=1, step=1, marks = marks_to_100),
-            html.Div("Minimale Unreinheitsänderung"),
-            dcc.Slider(id='min_impurity_decrease_dt', value=0.0,
-                        max=1, min=0.0, step=1e-3, marks = marks_to_1),
-            # html.Div("Minimale Unreinheit für Split"),
-            # dcc.Slider(id='min_impurity_split_dt', value=0.0,
-            #             max=100, min=0.0, step=1, marks = marks_to_100),
-            html.Div("Pruning"),
-            dcc.Slider(id='ccp_alpha_dt', value=0.0,
-                        max=100, min=0.0, step=1, marks = marks_to_100),
-            html.Button(id='submit_button_depth', children='submit'),
-            html.Div("Unreinheitsmaß"),
-            dcc.RadioItems(id='impurity_criterion', options=[{'label':'Gini', 'value':'gini'}, {'label':'Entropie', 'value':'entropy'}], value='gini'),
-            html.Div("Splitter"),
-            dcc.RadioItems(id='splitter_dt', options=[{'label':'Best', 'value':'best'}, {'label':'Random', 'value':'random'}], value='best'),
-            html.Div("Maximale Anzahl Feature im Blatt"),
-            dcc.RadioItems(id='max_features_dt', options=[{'label':'Auto', 'value':'auto'}, {'label':'Wurzel', 'value':'sqrt'}, {'label':'Logarithmus', 'value':'log2'}], value='auto'),
-            html.Div(id='dt-accuracy'),
-            dcc.Graph(id = 'DT-Graph', figure = show_decision_tree_path(0), animate=False),
-            html.Div(id='dt-text')
-        ]),
-        html.Br(),
+        dbc.Row(
+            [
+                dbc.Col(
+                    [
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        html.Div(
+                                            "Tiefe"
+                                        )
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        html.Div(
+                                            dcc.Slider(
+                                                id='input_dt_depth', 
+                                                value=8,
+                                                max=100, 
+                                                min=2, 
+                                                step=1, 
+                                                marks = marks_to_100
+                                            )
+                                        )
+                                    ]
+                                )
+                            ]
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        html.Div(
+                                            "Anzahl Beispiele für Split"
+                                        )
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        html.Div(
+                                            dcc.Slider(
+                                                id='min_samples_split_dt', 
+                                                value=2,
+                                                max=100, 
+                                                min=2, 
+                                                step=1, 
+                                                marks = marks_to_100
+                                            )
+                                        )
+                                    ]
+                                )
+                            ]
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        html.Div(
+                                            "Anzahl Beispiele in Blatt"
+                                        ),
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        html.Div(
+                                            dcc.Slider(
+                                                id='min_smp_lf_dt', 
+                                                value=1,
+                                                max=100, 
+                                                min=1, 
+                                                step=1, 
+                                                marks = marks_to_100
+                                            )
+                                        )
+                                    ]
+                                )
+                            ]
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        html.Div(
+                                            "Anzahl Blätter"
+                                        )
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        html.Div(
+                                            dcc.Slider(
+                                                id='max_leaf_nodes_dt', 
+                                                value=None,
+                                                max=100, 
+                                                min=1, 
+                                                step=1, 
+                                                marks = marks_to_100
+                                            )
+                                        )
+                                    ]
+                                )
+                            ]
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        html.Div(
+                                            "Minimale Unreinheitsänderung"
+                                        )
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        html.Div(
+                                            dcc.Slider(
+                                                id='min_impurity_decrease_dt', 
+                                                value=0.0,
+                                                max=1, 
+                                                min=0.0, 
+                                                step=1e-3, 
+                                                marks = marks_to_1
+                                            )
+                                        )
+                                    ]
+                                )
+                            ]
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        html.Div(
+                                            "Pruning"
+                                        )
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        # html.Div("Minimale Unreinheit für Split"),
+                                        # dcc.Slider(id='min_impurity_split_dt', value=0.0,
+                                        #             max=100, min=0.0, step=1, marks = marks_to_100),
+                                        html.Div(
+                                            dcc.Slider(
+                                                id='ccp_alpha_dt', 
+                                                value=0.0,
+                                                max=1, 
+                                                min=0.0, 
+                                                step=1, 
+                                                marks = marks_to_1
+                                            )
+                                        ) 
+                                    ]
+                                )
+                            ]
+                        ),
+                        dbc.Row(
+                            [
+                                # html.Button(id='submit_button_depth', children='submit'),
+                                dbc.Col(
+                                    [
+                                        html.Div(
+                                            "Unreinheitsmaß"
+                                        ),
+                                        html.Div(
+                                            dcc.RadioItems(
+                                                id='impurity_criterion', 
+                                                options=[{'label':'Gini', 'value':'gini'}, {'label':'Entropie', 'value':'entropy'}], 
+                                                value='gini'
+                                            )
+                                        )
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        html.Div(
+                                            "Splitter"
+                                        ),
+                                        html.Div(
+                                            dcc.RadioItems(
+                                                id='splitter_dt', 
+                                                options=[{'label':'Best', 'value':'best'}, {'label':'Random', 'value':'random'}], 
+                                                value='best'
+                                            )
+                                        )
+                                    ]
+                                ),
+                                dbc.Col(
+                                    children=[
+                                        html.Div(
+                                            "Maximale Anzahl Feature im Blatt"
+                                        ),
+                                        html.Div(
+                                            dcc.RadioItems(
+                                                id='max_features_dt', 
+                                                options=[
+                                                    {'label':'Auto', 'value':'auto'}, 
+                                                    {'label':'Wurzel', 'value':'sqrt'}, 
+                                                    {'label':'Logarithmus', 'value':'log2'}
+                                                ], 
+                                                value='auto'
+                                            )
+                                        )
+                                    ]
+                                )
+                            ]
+                        )
+                    ], width=7
+                ),
+                dbc.Col(
+                    [
+                        html.Div(
+                            id='dt-text'
+                        ),
+                        html.Br(),
+                        html.Br(),
+                        html.Div(
+                            html.H6(
+                                id='dt-accuracy'
+                            )
+                        )
+                    ], width=5
+                )
+            ],
+            style={'backgroundColor': 'lightgray', 'color': 'black', 'offset':'5%'}
+        ),
+        dbc.Row(
+            [
+                dbc.Col(
+                    [
+                        html.Div(
+                            dcc.Graph(
+                                id = 'DT-Graph', 
+                                figure = show_decision_tree_path(0), animate=False)
+                        )
+                    ]
+                )
+            ],
+            style={'backgroundColor': 'lightgray', 'color': 'black', 'offset':'5%'}
+        ),
+        # html.Br(),
         #endregion
         #region Linear Modell- Bereich
-        html.Div([
-            # html.Div("Dual? (sonst Primal)"), html.Div(id='dual_output'),
-            # daq.BooleanSwitch(id='dual', on=False),
-            html.Div("Toleranz"),
-            dcc.Slider(id='tol', value=1e-4,
-                        max=1, min=0, step=1e-5, marks = marks_to_1),
-            html.Div("Inverse Regulierung"),
-            dcc.Slider(id='C', value=1.0,
-                        max=10, min=0, step=1, marks = marks_to_10),
-            html.Div("Zusätzliche Konstante addieren?"),
-            daq.BooleanSwitch(id='fit_intercept', on=False),
-            # html.Div("Intercept Skalierung (nur für liblinear *und* Zusätzliche Konstante addieren = True)"),
-            # dcc.Slider(id='intercept_scaling', value=1.0,
-            #             max=100, min=1.0, step=1, marks = marks_to_100),
-            html.Div("Anzahl Maximale Iterationen"),
-            dcc.Slider(id='max_iter', value=100,
-                        max=200, min=0, step=1, marks = marks_to_200),
-            # html.Div("l1-Ratio"),
-            # dcc.Slider(id='l1-ratio', value=None,
-            #             max=1, min=0, step=1e-2, marks = marks_to_1),
-            html.Button(id='submit_button_lin_mod', children='submit'),
-            html.Div("Penalty l2 verwenden?"), html.Div(id='penalty_output'),
-            daq.BooleanSwitch(id='penalty', on=False),
-            # dcc.RadioItems(id='penalty', options=[{'label':'L1', 'value':'l1'}, {'label':'L2', 'value':'l2'}, {'label':'Elastic Net', 'value':'elasticnet'}, {'label':'None', 'value':'none'}], value='l2'),
-            # html.Div("Solver"),
-            # dcc.RadioItems(id='solver', options=[{'label':'Newton cg', 'value':'newton-cg'}, {'label':'lbfgs', 'value':'lbfgs'}, {'label':'liblinear', 'value':'liblinear'}, {'label':'sag', 'value':'sag'}, {'label':'saga', 'value':'saga'}], value='lbfgs'),
-            # html.Div("Multiclass"),
-            # dcc.RadioItems(id='multiclass', options=[{'label':'Auto', 'value':'auto'}, {'label':'Ovr', 'value':'ovr'}, {'label':'Multinomial', 'value':'multinomial'}], value='auto'),
-            html.Div(id='lin-mod-accuracy'),
-            dcc.Graph(id = 'Linear', figure = show_linear_model_both_in_one(0))
-        ]),
+        dbc.Row(
+            [
+                # html.Div("Dual? (sonst Primal)"), html.Div(id='dual_output'),
+                # daq.BooleanSwitch(id='dual', on=False),
+                dbc.Col(
+                    [
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        html.Br(),
+                                        html.Br(),
+                                        html.Br(),
+                                        html.Br(),
+                                        html.Div("Toleranz")
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        html.Br(),
+                                        html.Br(),
+                                        html.Br(),
+                                        html.Br(),
+                                        dcc.Slider(id='tol', value=1e-4,
+                                                    max=1, min=0, step=1e-5, marks = marks_to_1)
+                                    ]
+                                )
+                            ]
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        html.Div("Inverse Regulierung")
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        dcc.Slider(id='C', value=1.0,
+                                                max=10, min=0, step=1, marks = marks_to_10)
+                                    ]
+                                )
+                            ]
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [ 
+                                        html.Div(
+                                            "Zusätzliche Konstante addieren?"
+                                        )
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        html.Div(
+                                            daq.BooleanSwitch(
+                                                id='fit_intercept', 
+                                                on=False
+                                            )
+                                        )
+                                    ]
+                                )
+                            ]
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        html.Div("Anzahl Maximale Iterationen")
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        dcc.Slider(id='max_iter', value=100,
+                                        max=200, min=0, step=1, marks = marks_to_200)
+                                    ]
+                                )
+                            ]
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        html.Div(
+                                            "Penalty l2 verwenden?"
+                                        )
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        html.Div(
+                                            daq.BooleanSwitch(
+                                                id='penalty', 
+                                                on=False
+                                            )
+                                        )
+                                    ]
+                                )
+                            ]
+                        ),
+                        dbc.Row(
+                            [     
+                                dbc.Col(
+                                    [                            
+                                        html.Div(id='penalty_output')
+                                    ]
+                                )
+                            ]
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        html.Br(),
+                                        html.Br(),
+                                        html.Br(),
+                                        html.Div(html.H6(id='lin-mod-accuracy'))
+                                    ]
+                                )
+                            ]
+                        )
+                    ],
+                    style={'backgroundColor': 'white', 'color': 'black', 'width':5, 'offset':200}
+                ),
+                dbc.Col(
+                    [
+                        dcc.Graph(id = 'Linear', figure = show_linear_model_both_in_one(0))
+                    ], width = 7,
+                    style={'backgroundColor': 'white', 'color': 'black', 'offset':'5%'}
+                )
+               
+                # html.Div("Intercept Skalierung (nur für liblinear *und* Zusätzliche Konstante addieren = True)"),
+                # dcc.Slider(id='intercept_scaling', value=1.0,
+                #             max=100, min=1.0, step=1, marks = marks_to_100),                
+                # html.Div("l1-Ratio"),
+                # dcc.Slider(id='l1-ratio', value=None,
+                #             max=1, min=0, step=1e-2, marks = marks_to_1),
+                # html.Button(id='submit_button_lin_mod', children='submit'),
+                # dcc.RadioItems(id='penalty', options=[{'label':'L1', 'value':'l1'}, {'label':'L2', 'value':'l2'}, {'label':'Elastic Net', 'value':'elasticnet'}, {'label':'None', 'value':'none'}], value='l2'),
+                # html.Div("Solver"),
+                # dcc.RadioItems(id='solver', options=[{'label':'Newton cg', 'value':'newton-cg'}, {'label':'lbfgs', 'value':'lbfgs'}, {'label':'liblinear', 'value':'liblinear'}, {'label':'sag', 'value':'sag'}, {'label':'saga', 'value':'saga'}], value='lbfgs'),
+                # html.Div("Multiclass"),
+                # dcc.RadioItems(id='multiclass', options=[{'label':'Auto', 'value':'auto'}, {'label':'Ovr', 'value':'ovr'}, {'label':'Multinomial', 'value':'multinomial'}], value='auto'),
+                
+            ]
+        ),
         html.Br(),
         #endregion
         #region in sample cf
-        html.Div([
-            html.Div("Anzahl Nachbarn"),
-            dcc.Slider(id='n_neighbors', value=5.0,
-                        max=100, min=0.0, step=1, marks = marks_to_100),
-            html.Button(id='submit_button_cf', children='submit'),
-            html.Div("Distanzmetrik"),
-            dcc.RadioItems(id='distance_metric', options=[{'label':'Euklidisch', 'value':'euclidean'}, {'label':'Gower-Distanz', 'value':'gower'}], value='euclidean'),
-            # html.Div("Wenn knn: Metrik zur Distanzberechnung für knn"),
-            # dcc.RadioItems(id='metric', options=[{'label':'k-NearestNeighbor', 'value':'knn'}, {'label':'Gower-Distanz', 'value':'gower'}], value='knn'),
-            # html.Div("Zusätzliche Parameter für gewählte Metrik"),
-            # dcc.RadioItems(id='metric_params', options=[{'label':'k-NearestNeighbor', 'value':'knn'}, {'label':'Gower-Distanz', 'value':'gower'}], value='knn'),
-            dash_table.DataTable(
-            id='in-sample-cf',
-            columns=[
-                {"name": i, "id": i, "deletable":False, "selectable":True, "hideable":True}
-                for i in in_sample_cfs.columns
-            ],
-            data=in_sample_cfs.to_dict('records'))
-        ]),
-        html.Br(),
-        #endregion
+        dbc.Row(
+            [
+                dbc.Col(
+                    [
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        html.Br(),
+                                        html.Br(),
+                                        html.Div("Anzahl Nachbarn")
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        html.Br(),
+                                        html.Br(),
+                                        dcc.Slider(id='n_neighbors', value=5.0,
+                                                    max=100, min=0.0, step=1, marks = marks_to_100)
+                                    ]
+                                )
+                            ],
+                            style={'backgroundColor': 'white', 'color': 'black', 'offset':'20%'}
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        html.Div("Distanzmetrik")
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        dcc.RadioItems(id='distance_metric', options=[{'label':'Euklidisch', 'value':'euclidean'}, {'label':'Gower-Distanz', 'value':'gower'}], value='euclidean')
+                                    ]
+                                )
+                            ],
+                            style={'backgroundColor': 'white', 'color': 'black', 'offset':'20%'}
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        html.Br(),
+                                        html.Br(),
+                                        html.Br(),
+                                        html.Br(),
+                                        html.Div([
+                                            dcc.Loading(
+                                                id="loading-cf",
+                                                type="circle",
+                                                children=[
+                                                    dash_table.DataTable(
+                                                        id='in-sample-cf',
+                                                        columns=[
+                                                            {"name": i, "id": i, "deletable":False, "selectable":True, "hideable":True}
+                                                            for i in in_sample_cfs.columns
+                                                        ],
+                                                        data=in_sample_cfs.to_dict('records'),
+                                                        style_table={
+                                                        'overflowX': 'scroll'}
+                                                    )
+                                                ]
+                                            )
+                                        ])
+                                    ]
+                                )
+                            ],
+                            style={'backgroundColor': 'white', 'color': 'black', 'offset':'20%'}
+                        )
+                        # html.Button(id='submit_button_cf', children='submit'),
+                        # html.Div("Wenn knn: Metrik zur Distanzberechnung für knn"),
+                        # dcc.RadioItems(id='metric', options=[{'label':'k-NearestNeighbor', 'value':'knn'}, {'label':'Gower-Distanz', 'value':'gower'}], value='knn'),
+                        # html.Div("Zusätzliche Parameter für gewählte Metrik"),
+                        # dcc.RadioItems(id='metric_params', options=[{'label':'k-NearestNeighbor', 'value':'knn'}, {'label':'Gower-Distanz', 'value':'gower'}], value='knn'),
+                    ], width=6,
+                    style={'backgroundColor': 'white', 'color': 'black', 'offset':'20%'}
+                ),
+                #endregion
         #region Dice
-        html.Div([
-            html.Div("Anzahl zu berechnender Counterfactuals"),
-            dcc.Slider(id='no_CFs', value=4,
-                        max=20, min=1, step=1, marks = marks_to_20),
-            html.Div("Nähe zum Datenpunkt (je höher desto näher)"),
-            dcc.Slider(id='proximity_weight', value=0.5,
-                        max=10, min=0, step=0.1, marks = marks_to_10),
-            html.Div("Diversität der CFs (je höher desto diverser)"),
-            dcc.Slider(id='diversity_weight', value=0.1,
-                        max=10, min=0, step=0.1, marks = marks_to_10),
-            html.Button(id='submit_button_dice', children='submit'),
-            html.Div("Gewünschte Klasse der Counterfactuals"),
-            dcc.RadioItems(id='desired_class', options=[{'label':'Gegenteil der aktuellen', 'value':'opposite'}, {'label':'Aktuelle Klasse', 'value':'same'}], value='opposite'),
-            # html.Div("Posthoc Algorithmus"),
-            # dcc.RadioItems(id='posthoc_sparsity_algorithm', options=[{'label':'Linear', 'value':'linear'}, {'label':'Binär', 'value':'binary'}], value='linear'),
-            dash_table.DataTable(
-            id='dice',
-            columns=[
-                {"name": i, "id": i, "deletable":False, "selectable":True, "hideable":True}
-                for i in dice_cfs.columns
-            ],
-            data=dice_cfs.to_dict('records'))]),
-        html.Br(),
+                dbc.Col(
+                    [
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        html.Br(),
+                                        html.Br(),
+                                        html.Div("Anzahl zu berechnender Counterfactuals")
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        html.Br(),
+                                        html.Br(),
+                                        dcc.Slider(id='no_CFs', value=4,
+                                                    max=20, min=1, step=1, marks = marks_to_20),
+                                    ]
+                                )
+                            ]
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        html.Div("Nähe zum Datenpunkt (je höher desto näher)")
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        dcc.Slider(id='proximity_weight', value=0.5,
+                                                    max=10, min=0, step=0.1, marks = marks_to_10),
+                                    ]
+                                )
+                            ]
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        html.Div("Diversität der CFs (je höher desto diverser)")
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        dcc.Slider(id='diversity_weight', value=0.1,
+                                                    max=10, min=0, step=0.1, marks = marks_to_10),
+                                    ]
+                                )
+                            ]
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        html.Div("Gewünschte Klasse der Counterfactuals")
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        dcc.RadioItems(id='desired_class', options=[{'label':'Gegenteil der aktuellen', 'value':'opposite'}, {'label':'Aktuelle Klasse', 'value':'same'}], value='opposite'),
+                                    ]
+                                )
+                            ]
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        dcc.Loading(
+                                            id="loading",
+                                            type="circle",
+                                            children=[
+                                                dash_table.DataTable(
+                                                    id='loading_dice',
+                                                    columns=[
+                                                        {"name": i, "id": i, "deletable":False, "selectable":True, "hideable":True}
+                                                        for i in dice_cfs.columns
+                                                    ],
+                                                    data=dice_cfs.to_dict('records'),
+                                                    style_table={
+                                                    'overflowX': 'scroll'}
+                                                )
+                                            ]
+                                        )
+                                    ]
+                                )
+                            ]
+                        )
+                            # html.Button(id='submit_button_dice', children='submit'),
+                            # html.Div("Posthoc Algorithmus"),
+                            # dcc.RadioItems(id='posthoc_sparsity_algorithm', options=[{'label':'Linear', 'value':'linear'}, {'label':'Binär', 'value':'binary'}], value='linear'),
+                    ], width=6,
+                    style={'backgroundColor': 'lightgray', 'color': 'black', 'offset':'5%'}
+                )
+            ]
+        ),
         #endregion
         #region Shap
-        html.Div([
+        dbc.Row(
+            [
             # html.Div("Ranked Outputs"),
             # dcc.Slider(id='ranked_outputs', value=None,
             #             max=len(x_test[0]), min=0, step=1, marks = marks_shap),
             # html.Button(id='submit_button_shap', children='submit'),
             # html.Div("Output Sortierung"),
             # dcc.RadioItems(id='output_rank_order', options=[{'label':'Max', 'value':'max'}, {'label':'Max Abs', 'value':'max_abs'},{'label':'Min', 'value':'min'}], value='max'),
-            dcc.Graph(id = 'deepShap', figure = shap_fig)
-        ]),
-        html.Br(),
+                dbc.Col(
+                    [
+                        dbc.Row(
+                            [
+                                html.Br(),
+                                html.Br(),
+                                html.Br(),
+                                html.Br(),
+                                html.Div(dcc.Graph(id = 'deepShap', figure = shap_fig))
+                            ]
+                        )
+                    ], width = 6,
+                    style={'backgroundColor': 'lightgray', 'color': 'black', 'offset':'5%'}
+                ),
         #endregion
         #region Lrp
-        html.Div([
-            # html.Div("Schicht, die angezeigt werden soll"),
-            # dcc.Slider(id='layer', value=0,
-            #             max=4, min=0, step=1, marks = marks_to_5),
-            # html.Button(id='submit_button_lrp', children='submit'),
-            html.Div("LRP-Regel für Berechnung der hidden-layer Relevanzen"),
-            dcc.RadioItems(id='lrp_type', options=[{'label':'LRP-Gamma', 'value':'gamma'}, {'label':'LRP-Epsilon', 'value':'epsilon'}, {'label':'LRP-0', 'value':'0'}], value='gamma'),
-            dcc.Graph(id = 'LRP', figure = show_lrp_visualization(0,0))
-        ]),
-        html.Br(),
-        html.Br()
+                dbc.Col(
+                    [
+                        dbc.Row(
+                            [
+                                html.Br(),
+                                html.Br(),
+                                html.Div("LRP-Regel für Berechnung der hidden-layer Relevanzen")
+                            ]
+                        ),
+                        dbc.Row(
+                            [
+                                dcc.RadioItems(id='lrp_type', options=[{'label':'LRP-Gamma', 'value':'gamma'}, {'label':'LRP-Epsilon', 'value':'epsilon'}, {'label':'LRP-0', 'value':'0'}], value='gamma')
+                            ]
+                        ),
+                        dbc.Row(
+                            [
+                                dcc.Graph(id = 'LRP', figure = show_lrp_visualization(0,0))
+                            ]
+                        )
+                    ], width=6,
+                    style={'backgroundColor': 'white', 'color': 'black', 'offset':'5%'}
+                )
+        ])
         #endregion
+        # html.Br(),
+        # html.Div([
+        #     # html.Div("Schicht, die angezeigt werden soll"),
+        #     # dcc.Slider(id='layer', value=0,
+        #     #             max=4, min=0, step=1, marks = marks_to_5),
+        #     # html.Button(id='submit_button_lrp', children='submit'),
+            
+        # ], 
+        # className='six columns',
+        # style={'backgroundColor': 'white', 'color': 'black', 'width': '50%', 'display' : 'flex'}),
+        # html.Br(),
+        # html.Br()
     ])
 
 @app.callback(
@@ -880,7 +1432,6 @@ def update_dp(selected_datapoint):
     [Output(component_id='DT-Graph', component_property='figure'),
     Output('dt-text', 'children'),
     Output('dt-accuracy', 'children')],
-    [Input(component_id='submit_button_depth', component_property='n_clicks')],
     [Input(component_id='datapoint_selection_dropdown', component_property='value')],
     [Input(component_id='impurity_criterion', component_property='value')],
     [Input(component_id='splitter_dt', component_property='value')],
@@ -890,7 +1441,7 @@ def update_dp(selected_datapoint):
     [Input(component_id='min_smp_lf_dt', component_property='value')],
     [Input(component_id='max_leaf_nodes_dt', component_property='value')],
     [Input(component_id='ccp_alpha_dt', component_property='value')])
-def update_dt_depth(n_clicks, selected_datapoint, criterion, splitter,
+def update_dt_depth(selected_datapoint, criterion, splitter,
                     max_features, dt_depth, min_samples_split, min_smp_lf,
                     max_leaf_nodes, ccp_alpha):
     global global_dp_selection_index
@@ -901,7 +1452,7 @@ def update_dt_depth(n_clicks, selected_datapoint, criterion, splitter,
                                             min_samples_split=min_samples_split, min_smp_lf=min_smp_lf,
                                             max_features=max_features,
                                             max_leaf_nodes=max_leaf_nodes,
-                                            ccp_alpha=0)
+                                            ccp_alpha=ccp_alpha)
     global_dp_selection_index = idx
 
     accuracy = "Genauigkeit: {acc}".format(acc=accuracy)
@@ -913,14 +1464,13 @@ def update_dt_depth(n_clicks, selected_datapoint, criterion, splitter,
     [Output(component_id='Linear', component_property='figure'),
     Output(component_id='lin-mod-accuracy', component_property='children')
     ],
-    [Input(component_id='submit_button_lin_mod', component_property='n_clicks')],
     [Input(component_id='datapoint_selection_dropdown', component_property='value')],
     [Input(component_id='penalty', component_property='on')],
     [Input(component_id='tol', component_property='value')],
     [Input(component_id='fit_intercept', component_property='on')],
     [Input(component_id='C', component_property='value')],
     [Input(component_id='max_iter', component_property='value')])
-def update_lin(n_clicks, selected_datapoint, penalty, tol,
+def update_lin(selected_datapoint, penalty, tol,
                 fit_intercept, C, max_iter):
     idx = helper.get_id_for_dp(x_test, selected_datapoint)
     
@@ -941,11 +1491,10 @@ def update_lin(n_clicks, selected_datapoint, penalty, tol,
 
 @app.callback(
     Output(component_id='in-sample-cf', component_property='data'),
-    [Input(component_id='submit_button_cf', component_property='n_clicks')],
     [Input(component_id='datapoint_selection_dropdown', component_property='value')],
     [Input(component_id='distance_metric', component_property='value')],
     [Input(component_id='n_neighbors', component_property='value')])
-def update_cf(n_clicks, selected_datapoint, distance_metric, n_neighbors):
+def update_cf(selected_datapoint, distance_metric, n_neighbors):
     idx = helper.get_id_for_dp(x_test, selected_datapoint)
 
     cf_upd = show_counterfactual_explanation(n_neighbors=n_neighbors,
@@ -966,14 +1515,13 @@ def update_cf(n_clicks, selected_datapoint, distance_metric, n_neighbors):
 
 
 @app.callback(
-    Output(component_id='dice', component_property='data'),
-    [Input(component_id='submit_button_dice', component_property='n_clicks')],
+    Output(component_id='loading_dice', component_property='data'),
     [Input(component_id='datapoint_selection_dropdown', component_property='value')],
     [Input(component_id='desired_class', component_property='value')],
     [Input(component_id='no_CFs', component_property='value')],
     [Input(component_id='proximity_weight', component_property='value')],
     [Input(component_id='diversity_weight', component_property='value')])
-def update_dice(n_clicks, selected_datapoint, desired_class,
+def update_dice(selected_datapoint, desired_class,
                 no_CFs, proximity_weight, diversity_weight):
     idx = helper.get_id_for_dp(x_test, selected_datapoint)
 
@@ -1006,6 +1554,9 @@ def update_ds(selected_datapoint):
     ds_upd_0, ds_upd_1= show_DeepSHAP_visualization(idx)
     ds_upd.add_trace(ds_upd_0)
     ds_upd.add_trace(ds_upd_1)
+    ds_upd.update_layout(
+              plot_bgcolor='lightgray',
+              paper_bgcolor='lightgray')
     print("Shap Callback")
     return ds_upd
 
@@ -1020,6 +1571,15 @@ def update_lrp(selected_datapoint, lrp_type):
     lrp_upd = show_lrp_visualization(0,idx, lrp_type)
     print("lrp Callback")
     return lrp_upd
+
+@app.callback(
+    Output("collapse", "is_open"),
+    [Input("collapse-button", "n_clicks")],
+    [State("collapse", "is_open")])
+def toggle_collapse(n, is_open):
+    if n:
+        return not is_open
+    return is_open
 
 def main():
     dash_set_layout()

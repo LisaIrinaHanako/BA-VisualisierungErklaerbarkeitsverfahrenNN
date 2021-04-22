@@ -75,9 +75,26 @@ def inverse_preprocessing_single(ds, datapoint):
     num_features = features[0:len(ds.numerical_variables)]
     cat_features = features[len(num_features):]
 
+    # print("num, dp", num_features.shape)
+    # print("cat, dp", cat_features.shape)
     inversed_num = scaler.inverse_transform(num_features)
     inversed_cat = ohe.inverse_transform(cat_features.reshape(1, -1) )
     return inversed_num, inversed_cat[0]
+
+def inverse_preprocessing_single_feature(ds, feature, isCat):
+    transformer = ds.transformer
+    # if isCat:
+    #     ohe = transformer.named_transformers_['ohe']
+    #     print("cat, feature",type(feature))
+    #     inversed_cat = ohe.inverse_transform(feature.reshape(1, -1))
+    #     return inversed_cat
+    # else:
+    #     scaler = transformer.named_transformers_['num']
+    #     print("num, feature", type(feature))
+    #     inversed_num = scaler.inverse_transform(feature)
+    #     return inversed_num
+    return feature
+
 
 # TODO
 def get_id_for_dp(x_test, dp):
