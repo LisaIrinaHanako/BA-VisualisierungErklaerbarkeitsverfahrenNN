@@ -712,6 +712,7 @@ def dash_set_layout():
               paper_bgcolor='lightgray')
 
     marks_to_1 = { 0.1*i : "{val}".format(val = helper.round_to_1(0.1*i)) for i in range(10)}
+    marks_to_marks_to_099 = { 10*i : "{val}".format(val = (0.01*i)) for i in range(99)}
     marks_to_5 = { i : "{val}".format(val = i) for i in range(5)}
     marks_to_10 = { i : "{val}".format(val = i) for i in range(10)}
     marks_to_20 = { 5*i : "{val}".format(val = 5*i) for i in range(4)}
@@ -927,8 +928,8 @@ def dash_set_layout():
                                                 value=0.0,
                                                 max=1, 
                                                 min=0.0, 
-                                                step=1, 
-                                                marks = marks_to_1
+                                                step=0.001, 
+                                                marks = marks_to_099
                                             )
                                         ) 
                                     ]
@@ -965,25 +966,26 @@ def dash_set_layout():
                                             )
                                         )
                                     ]
-                                ),
-                                dbc.Col(
-                                    children=[
-                                        html.Div(
-                                            "Maximale Anzahl Feature im Blatt"
-                                        ),
-                                        html.Div(
-                                            dcc.RadioItems(
-                                                id='max_features_dt', 
-                                                options=[
-                                                    {'label':'Auto', 'value':'auto'}, 
-                                                    {'label':'Wurzel', 'value':'sqrt'}, 
-                                                    {'label':'Logarithmus', 'value':'log2'}
-                                                ], 
-                                                value='auto'
-                                            )
-                                        )
-                                    ]
                                 )
+                                # ,
+                                # dbc.Col(
+                                #     children=[
+                                #         html.Div(
+                                #             "Maximale Anzahl Feature im Blatt"
+                                #         ),
+                                #         html.Div(
+                                #             dcc.RadioItems(
+                                #                 id='max_features_dt', 
+                                #                 options=[
+                                #                     {'label':'Auto', 'value':'auto'}, 
+                                #                     {'label':'Wurzel', 'value':'sqrt'}, 
+                                #                     {'label':'Logarithmus', 'value':'log2'}
+                                #                 ], 
+                                #                 value='auto'
+                                #             )
+                                #         )
+                                #     ]
+                                # )
                             ]
                         )
                     ], width=7
@@ -1435,14 +1437,13 @@ def update_dp(selected_datapoint):
     [Input(component_id='datapoint_selection_dropdown', component_property='value')],
     [Input(component_id='impurity_criterion', component_property='value')],
     [Input(component_id='splitter_dt', component_property='value')],
-    [Input(component_id='max_features_dt', component_property='value')],
     [Input(component_id='input_dt_depth', component_property='value')],
     [Input(component_id='min_samples_split_dt', component_property='value')],
     [Input(component_id='min_smp_lf_dt', component_property='value')],
     [Input(component_id='max_leaf_nodes_dt', component_property='value')],
     [Input(component_id='ccp_alpha_dt', component_property='value')])
 def update_dt_depth(selected_datapoint, criterion, splitter,
-                    max_features, dt_depth, min_samples_split, min_smp_lf,
+                    dt_depth, min_samples_split, min_smp_lf,
                     max_leaf_nodes, ccp_alpha):
     global global_dp_selection_index
     idx = helper.get_id_for_dp(x_test, selected_datapoint)
@@ -1450,7 +1451,7 @@ def update_dt_depth(selected_datapoint, criterion, splitter,
 
     dt_upd, text, accuracy  = show_decision_tree_path(idx, criterion, splitter=splitter, max_depth=dt_depth,
                                             min_samples_split=min_samples_split, min_smp_lf=min_smp_lf,
-                                            max_features=max_features,
+                                            max_features=None,
                                             max_leaf_nodes=max_leaf_nodes,
                                             ccp_alpha=ccp_alpha)
     global_dp_selection_index = idx
