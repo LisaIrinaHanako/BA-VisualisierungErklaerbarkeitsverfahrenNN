@@ -318,7 +318,7 @@ def get_edge_labels(labels, node_index, feature, x_test, threshold, datapoint_in
             labels.append("({feat_val}) {thres_sign} ({thres_inv})".format(
                                     feat_val=feature_value,
                                     thres_sign=threshold_sign, 
-                                    thres_val= thres_inversed))
+                                    thres_inv= thres_inversed))
         else:
             feature_name = feature_name_onehot
             feature_value = inversed_num[helper.get_idx_for_feature(feature_name, inversed_num)]
@@ -736,7 +736,7 @@ def dash_set_layout():
               paper_bgcolor='lightgray')
 
     marks_to_1 = { 0.1*i : "{val}".format(val = helper.round_to_1(0.1*i)) for i in range(10)}
-    marks_to_003 = { 0.01*i : "{val}".format(val = (0.01*i)) for i in range(3)}
+    marks_to_003 = { 0.005*i : "{val}".format(val = (0.005*i)) for i in range(6)}
     marks_to_5 = { i : "{val}".format(val = i) for i in range(5)}
     marks_to_10 = { i : "{val}".format(val = i) for i in range(10)}
     marks_to_20 = { 5*i : "{val}".format(val = 5*i) for i in range(4)}
@@ -947,7 +947,7 @@ def dash_set_layout():
                                             dcc.Slider(
                                                 id='ccp_alpha_dt', 
                                                 value=0.0,
-                                                max=0.003, 
+                                                max=0.03, 
                                                 min=0.0, 
                                                 step=0.0001, 
                                                 marks = marks_to_003
