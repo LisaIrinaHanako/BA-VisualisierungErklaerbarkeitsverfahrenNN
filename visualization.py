@@ -44,7 +44,7 @@ clf = load_model(path="./interactive_ba_preparation_master/net.pth")
 clf = clf.eval()
 ds = German_Credit(path="./interactive_ba_preparation_master/german.data")
 
-app = dash.Dash(__name__, external_stylesheets = [dbc.themes.BOOTSTRAP])
+app = dash.Dash(__name__, external_stylesheets = [dbc.themes.BOOTSTRAP], serve_locally = False)
 
 
 x_test, y_test, x_train, y_train, y_net_test, y_net_train = helper.get_samples_and_labels(ds, clf)
@@ -88,19 +88,23 @@ def show_decision_tree_path(datapoint_index, criterion='gini', splitter='best', 
     node_index = node_indicator.indices[node_indicator.indptr[datapoint_index]:
                                     node_indicator.indptr[datapoint_index + 1]]
 
-    fig, dt_edges, dt_nodes = create_and_get_tree(node_index, feature, x_test, threshold, datapoint_index, predictions)
+    fig = go.Figure()
+    text = ""
+    accuracy = ""
 
-    visual_style = {}
-    # visual_style["vertex_size"] = 200
-    # plot(fig, visual_style)
+    pruning_too_big = False
+    if max(node_index) == 0:
+        pruning_too_big = True
+    else:
+        fig, dt_edges, dt_nodes = create_and_get_tree(node_index, feature, x_test, threshold, datapoint_index, predictions)
+        visual_style = {}
+        global y_net_test
+        accuracy = dt.dt_accuracy(predictions, y_net_test)
 
+        # return dt_edges, dt_nodes
+        text = show_decision_tree_text([], node_index, feature, x_test, threshold, datapoint_index, predictions)
 
-    global y_net_test
-    accuracy = dt.dt_accuracy(predictions, y_net_test)
-
-    # return dt_edges, dt_nodes
-    text = show_decision_tree_text([], node_index, feature, x_test, threshold, datapoint_index, predictions)
-    return fig, text, accuracy
+    return fig, text, accuracy, pruning_too_big
 
 def show_decision_tree_text(explanaition_text, node_index, feature, x_test, threshold, datapoint_index, predictions):
     for node_id in node_index:
@@ -115,27 +119,37 @@ def show_decision_tree_text(explanaition_text, node_index, feature, x_test, thre
 
         if is_cat_feature:
             feature_name = feature_name_onehot.split(":")[0]
-            feature_value = inversed_cat[helper.get_idx_for_feature(feature_name, inversed_cat)]
-            feature_value = feature_name_onehot.split(":")[1]
-            thres_inversed = helper.inverse_preprocessing_single_feature(ds, threshold_value, True)
+            found = False
+            for i,feat in enumerate(ds.categorical_variables):
+                if feat == feature_name:
+                    cat_val_to_test = ds.categories[i]
+                    for cat in cat_val_to_test:
+                        if cat in inversed_cat.tolist():
+                            found = True
+                            feature_value = cat
+            if not found:
+                feature_value = "leer?"
+
+            thres_inversed = feature_name_onehot.split(":")[1]
+
             if (x_test[datapoint_index, feature_id] <= threshold_value):
                 threshold_sign = "!="
             else:
                 threshold_sign = "="
-            explanaition_text.append(html.Div("Knoten {node}: {feat_name} {thres_sign} {feat_val}\n".format(
+            explanaition_text.append(html.Div("Knoten {node}: {feat_name} ist ({feat_val}) {thres_sign} ({thres_inv})\n".format(
                                 node = node_id, feat_name= feature_name, feat_val=feature_value,
-                                thres_sign=threshold_sign)))
+                                thres_sign=threshold_sign, thres_inv = thres_inversed)))
         else:
             feature_name = feature_name_onehot
             feature_value = inversed_num[helper.get_idx_for_feature(feature_name, inversed_num)]
-            thres_inversed = helper.inverse_preprocessing_single_feature(ds, threshold_value, False)
+            thres_inversed = helper.inverse_preprocessing_single_feature(ds, x_test[0], threshold_value, feature_id, feature_name, False)
             if (x_test[datapoint_index, feature_id] <= threshold_value):
                 threshold_sign = "<="
             else:
                 threshold_sign = ">"
-            explanaition_text.append(html.Div("Knoten {node}: {feat_name} = {feat_val} {thres_sign} {thres_val} \n".format(
+            explanaition_text.append(html.Div("Knoten {node}: {feat_name} ist {feat_val} {thres_sign} {thres_val} \n".format(
                                     node = node_id, feat_name= feature_name, feat_val=feature_value,
-                                    thres_sign=threshold_sign, thres_val= threshold_value)))
+                                    thres_sign=threshold_sign, thres_val= thres_inversed)))
 
         # explanaition_text.append(html.Br())
 
@@ -284,21 +298,31 @@ def get_edge_labels(labels, node_index, feature, x_test, threshold, datapoint_in
 
         if is_cat_feature:
             feature_name = feature_name_onehot.split(":")[0]
-            feature_value = inversed_cat[helper.get_idx_for_feature(feature_name, inversed_cat)]
-            feature_value = feature_name_onehot.split(":")[1]
-            thres_inversed = helper.inverse_preprocessing_single_feature(ds, threshold_value, True)
+            found = False
+            for i,feat in enumerate(ds.categorical_variables):
+                if feat == feature_name:
+                    cat_val_to_test = ds.categories[i]
+                    for cat in cat_val_to_test:
+                        if cat in inversed_cat.tolist():
+                            found = True
+                            feature_value = cat
+            if not found:
+                feature_value = "leer?"
+
+            thres_inversed = feature_name_onehot.split(":")[1]
+
             if (x_test[datapoint_index, feature_id] <= threshold_value):
                 threshold_sign = "!="
             else:
                 threshold_sign = "="
-            labels.append("{feat_val} {thres_sign} {thres_val}".format(
+            labels.append("({feat_val}) {thres_sign} ({thres_inv})".format(
                                     feat_val=feature_value,
                                     thres_sign=threshold_sign, 
-                                    thres_val= threshold_value))
+                                    thres_val= thres_inversed))
         else:
             feature_name = feature_name_onehot
             feature_value = inversed_num[helper.get_idx_for_feature(feature_name, inversed_num)]
-            thres_inversed = helper.inverse_preprocessing_single_feature(ds, threshold_value, False)
+            thres_inversed = helper.inverse_preprocessing_single_feature(ds, x_test[0], threshold_value, feature_id, feature_name, False)
             if (x_test[datapoint_index, feature_id] <= threshold_value):
                 threshold_sign = "<="
             else:
@@ -306,7 +330,7 @@ def get_edge_labels(labels, node_index, feature, x_test, threshold, datapoint_in
             labels.append("{feat_val} {thres_sign} {thres_val}".format(
                                     feat_val=feature_value,
                                     thres_sign=threshold_sign, 
-                                    thres_val= threshold_value))
+                                    thres_val= thres_inversed))
 
         # if (feature_value <= threshold_value):
         #     threshold_sign = " <= "
@@ -712,7 +736,7 @@ def dash_set_layout():
               paper_bgcolor='lightgray')
 
     marks_to_1 = { 0.1*i : "{val}".format(val = helper.round_to_1(0.1*i)) for i in range(10)}
-    marks_to_marks_to_099 = { 10*i : "{val}".format(val = (0.01*i)) for i in range(99)}
+    marks_to_003 = { 0.01*i : "{val}".format(val = (0.01*i)) for i in range(3)}
     marks_to_5 = { i : "{val}".format(val = i) for i in range(5)}
     marks_to_10 = { i : "{val}".format(val = i) for i in range(10)}
     marks_to_20 = { 5*i : "{val}".format(val = 5*i) for i in range(4)}
@@ -883,31 +907,31 @@ def dash_set_layout():
                                 )
                             ]
                         ),
-                        dbc.Row(
-                            [
-                                dbc.Col(
-                                    [
-                                        html.Div(
-                                            "Minimale Unreinheitsänderung"
-                                        )
-                                    ]
-                                ),
-                                dbc.Col(
-                                    [
-                                        html.Div(
-                                            dcc.Slider(
-                                                id='min_impurity_decrease_dt', 
-                                                value=0.0,
-                                                max=1, 
-                                                min=0.0, 
-                                                step=1e-3, 
-                                                marks = marks_to_1
-                                            )
-                                        )
-                                    ]
-                                )
-                            ]
-                        ),
+                        # dbc.Row(
+                        #     [
+                        #         dbc.Col(
+                        #             [
+                        #                 html.Div(
+                        #                     "Minimale Unreinheitsänderung"
+                        #                 )
+                        #             ]
+                        #         ),
+                        #         dbc.Col(
+                        #             [
+                        #                 html.Div(
+                        #                     dcc.Slider(
+                        #                         id='min_impurity_decrease_dt', 
+                        #                         value=0.0,
+                        #                         max=1, 
+                        #                         min=0.0, 
+                        #                         step=1e-3, 
+                        #                         marks = marks_to_1
+                        #                     )
+                        #                 )
+                        #             ]
+                        #         )
+                        #     ]
+                        # ),
                         dbc.Row(
                             [
                                 dbc.Col(
@@ -919,17 +943,14 @@ def dash_set_layout():
                                 ),
                                 dbc.Col(
                                     [
-                                        # html.Div("Minimale Unreinheit für Split"),
-                                        # dcc.Slider(id='min_impurity_split_dt', value=0.0,
-                                        #             max=100, min=0.0, step=1, marks = marks_to_100),
                                         html.Div(
                                             dcc.Slider(
                                                 id='ccp_alpha_dt', 
                                                 value=0.0,
-                                                max=1, 
+                                                max=0.003, 
                                                 min=0.0, 
-                                                step=0.001, 
-                                                marks = marks_to_099
+                                                step=0.0001, 
+                                                marks = marks_to_003
                                             )
                                         ) 
                                     ]
@@ -938,7 +959,17 @@ def dash_set_layout():
                         ),
                         dbc.Row(
                             [
-                                # html.Button(id='submit_button_depth', children='submit'),
+                                dbc.Col(
+                                    [
+                                        html.Div(
+                                            id='pruning-error-output'
+                                        )
+                                    ]
+                                )
+                            ]
+                        ),
+                        dbc.Row(
+                            [
                                 dbc.Col(
                                     [
                                         html.Div(
@@ -992,15 +1023,47 @@ def dash_set_layout():
                 ),
                 dbc.Col(
                     [
-                        html.Div(
-                            id='dt-text'
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        html.Div(
+                                            id='dt-text'
+                                        ),
+                                        html.Br(),
+                                        html.Br(),
+                                        html.Div(
+                                            html.H6(
+                                                id='dt-accuracy'
+                                            )
+                                        )
+                                    ]
+                                )
+                            ]
                         ),
-                        html.Br(),
-                        html.Br(),
-                        html.Div(
-                            html.H6(
-                                id='dt-accuracy'
-                            )
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        daq.Indicator(
+                                            labelPosition="left",
+                                            label="Laufzeit",
+                                            color="green",
+                                            value=True
+                                        )  
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        daq.Indicator(
+                                            labelPosition="left",
+                                            label="Speicherbedarf",
+                                            color="yellow",
+                                            value=True
+                                        )  
+                                    ]
+                                )
+                            ]
                         )
                     ], width=5
                 )
@@ -1021,13 +1084,10 @@ def dash_set_layout():
             ],
             style={'backgroundColor': 'lightgray', 'color': 'black', 'offset':'5%'}
         ),
-        # html.Br(),
         #endregion
         #region Linear Modell- Bereich
         dbc.Row(
             [
-                # html.Div("Dual? (sonst Primal)"), html.Div(id='dual_output'),
-                # daq.BooleanSwitch(id='dual', on=False),
                 dbc.Col(
                     [
                         dbc.Row(
@@ -1145,6 +1205,30 @@ def dash_set_layout():
                                     ]
                                 )
                             ]
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        daq.Indicator(
+                                            labelPosition="left",
+                                            label="Laufzeit",
+                                            color="green",
+                                            value=True
+                                        )  
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        daq.Indicator(
+                                            labelPosition="left",
+                                            label="Speicherbedarf",
+                                            color="yellow",
+                                            value=True
+                                        )  
+                                    ]
+                                )
+                            ]
                         )
                     ],
                     style={'backgroundColor': 'white', 'color': 'black', 'width':5, 'offset':200}
@@ -1155,20 +1239,6 @@ def dash_set_layout():
                     ], width = 7,
                     style={'backgroundColor': 'white', 'color': 'black', 'offset':'5%'}
                 )
-               
-                # html.Div("Intercept Skalierung (nur für liblinear *und* Zusätzliche Konstante addieren = True)"),
-                # dcc.Slider(id='intercept_scaling', value=1.0,
-                #             max=100, min=1.0, step=1, marks = marks_to_100),                
-                # html.Div("l1-Ratio"),
-                # dcc.Slider(id='l1-ratio', value=None,
-                #             max=1, min=0, step=1e-2, marks = marks_to_1),
-                # html.Button(id='submit_button_lin_mod', children='submit'),
-                # dcc.RadioItems(id='penalty', options=[{'label':'L1', 'value':'l1'}, {'label':'L2', 'value':'l2'}, {'label':'Elastic Net', 'value':'elasticnet'}, {'label':'None', 'value':'none'}], value='l2'),
-                # html.Div("Solver"),
-                # dcc.RadioItems(id='solver', options=[{'label':'Newton cg', 'value':'newton-cg'}, {'label':'lbfgs', 'value':'lbfgs'}, {'label':'liblinear', 'value':'liblinear'}, {'label':'sag', 'value':'sag'}, {'label':'saga', 'value':'saga'}], value='lbfgs'),
-                # html.Div("Multiclass"),
-                # dcc.RadioItems(id='multiclass', options=[{'label':'Auto', 'value':'auto'}, {'label':'Ovr', 'value':'ovr'}, {'label':'Multinomial', 'value':'multinomial'}], value='auto'),
-                
             ]
         ),
         html.Br(),
@@ -1217,6 +1287,30 @@ def dash_set_layout():
                             [
                                 dbc.Col(
                                     [
+                                        daq.Indicator(
+                                            labelPosition="left",
+                                            label="Laufzeit",
+                                            color="yellow",
+                                            value=True
+                                        )  
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        daq.Indicator(
+                                            labelPosition="left",
+                                            label="Speicherbedarf",
+                                            color="green",
+                                            value=True
+                                        )  
+                                    ]
+                                )
+                            ]
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
                                         html.Br(),
                                         html.Br(),
                                         html.Br(),
@@ -1244,11 +1338,6 @@ def dash_set_layout():
                             ],
                             style={'backgroundColor': 'white', 'color': 'black', 'offset':'20%'}
                         )
-                        # html.Button(id='submit_button_cf', children='submit'),
-                        # html.Div("Wenn knn: Metrik zur Distanzberechnung für knn"),
-                        # dcc.RadioItems(id='metric', options=[{'label':'k-NearestNeighbor', 'value':'knn'}, {'label':'Gower-Distanz', 'value':'gower'}], value='knn'),
-                        # html.Div("Zusätzliche Parameter für gewählte Metrik"),
-                        # dcc.RadioItems(id='metric_params', options=[{'label':'k-NearestNeighbor', 'value':'knn'}, {'label':'Gower-Distanz', 'value':'gower'}], value='knn'),
                     ], width=6,
                     style={'backgroundColor': 'white', 'color': 'black', 'offset':'20%'}
                 ),
@@ -1323,6 +1412,30 @@ def dash_set_layout():
                             [
                                 dbc.Col(
                                     [
+                                        daq.Indicator(
+                                            labelPosition="left",
+                                            label="Laufzeit",
+                                            color="red",
+                                            value=True
+                                        )  
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        daq.Indicator(
+                                            labelPosition="left",
+                                            label="Speicherbedarf",
+                                            color="green",
+                                            value=True
+                                        )  
+                                    ]
+                                )
+                            ]
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
                                         dcc.Loading(
                                             id="loading",
                                             type="circle",
@@ -1343,9 +1456,6 @@ def dash_set_layout():
                                 )
                             ]
                         )
-                            # html.Button(id='submit_button_dice', children='submit'),
-                            # html.Div("Posthoc Algorithmus"),
-                            # dcc.RadioItems(id='posthoc_sparsity_algorithm', options=[{'label':'Linear', 'value':'linear'}, {'label':'Binär', 'value':'binary'}], value='linear'),
                     ], width=6,
                     style={'backgroundColor': 'lightgray', 'color': 'black', 'offset':'5%'}
                 )
@@ -1355,12 +1465,6 @@ def dash_set_layout():
         #region Shap
         dbc.Row(
             [
-            # html.Div("Ranked Outputs"),
-            # dcc.Slider(id='ranked_outputs', value=None,
-            #             max=len(x_test[0]), min=0, step=1, marks = marks_shap),
-            # html.Button(id='submit_button_shap', children='submit'),
-            # html.Div("Output Sortierung"),
-            # dcc.RadioItems(id='output_rank_order', options=[{'label':'Max', 'value':'max'}, {'label':'Max Abs', 'value':'max_abs'},{'label':'Min', 'value':'min'}], value='max'),
                 dbc.Col(
                     [
                         dbc.Row(
@@ -1368,7 +1472,35 @@ def dash_set_layout():
                                 html.Br(),
                                 html.Br(),
                                 html.Br(),
-                                html.Br(),
+                                html.Br()
+                            ]
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        daq.Indicator(
+                                            labelPosition="left",
+                                            label="Laufzeit",
+                                            color="green",
+                                            value=True
+                                        )  
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        daq.Indicator(
+                                            labelPosition="left",
+                                            label="Speicherbedarf",
+                                            color="red",
+                                            value=True
+                                        )  
+                                    ]
+                                )
+                            ]
+                        ),
+                        dbc.Row(
+                            [
                                 html.Div(dcc.Graph(id = 'deepShap', figure = shap_fig))
                             ]
                         )
@@ -1381,19 +1513,55 @@ def dash_set_layout():
                     [
                         dbc.Row(
                             [
-                                html.Br(),
-                                html.Br(),
-                                html.Div("LRP-Regel für Berechnung der hidden-layer Relevanzen")
+                                dbc.Col(
+                                    [
+                                        html.Br(),
+                                        html.Br(),
+                                        html.Div("LRP-Regel für Berechnung der hidden-layer Relevanzen")
+                                    ]
+                                )
                             ]
                         ),
                         dbc.Row(
                             [
-                                dcc.RadioItems(id='lrp_type', options=[{'label':'LRP-Gamma', 'value':'gamma'}, {'label':'LRP-Epsilon', 'value':'epsilon'}, {'label':'LRP-0', 'value':'0'}], value='gamma')
+                                dbc.Col(
+                                    [
+                                        dcc.RadioItems(id='lrp_type', options=[{'label':'LRP-Gamma', 'value':'gamma'}, {'label':'LRP-Epsilon', 'value':'epsilon'}, {'label':'LRP-0', 'value':'0'}], value='gamma')
+                                    ]
+                                )
                             ]
                         ),
                         dbc.Row(
                             [
-                                dcc.Graph(id = 'LRP', figure = show_lrp_visualization(0,0))
+                                dbc.Col(
+                                    [
+                                        daq.Indicator(
+                                            labelPosition="left",
+                                            label="Laufzeit",
+                                            color="yellow",
+                                            value=True
+                                        )  
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        daq.Indicator(
+                                            labelPosition="left",
+                                            label="Speicherbedarf",
+                                            color="red",
+                                            value=True
+                                        )  
+                                    ]
+                                )
+                            ]
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        dcc.Graph(id = 'LRP', figure = show_lrp_visualization(0,0))
+                                    ]
+                                )
                             ]
                         )
                     ], width=6,
@@ -1401,18 +1569,6 @@ def dash_set_layout():
                 )
         ])
         #endregion
-        # html.Br(),
-        # html.Div([
-        #     # html.Div("Schicht, die angezeigt werden soll"),
-        #     # dcc.Slider(id='layer', value=0,
-        #     #             max=4, min=0, step=1, marks = marks_to_5),
-        #     # html.Button(id='submit_button_lrp', children='submit'),
-            
-        # ], 
-        # className='six columns',
-        # style={'backgroundColor': 'white', 'color': 'black', 'width': '50%', 'display' : 'flex'}),
-        # html.Br(),
-        # html.Br()
     ])
 
 @app.callback(
@@ -1433,7 +1589,9 @@ def update_dp(selected_datapoint):
 @app.callback(
     [Output(component_id='DT-Graph', component_property='figure'),
     Output('dt-text', 'children'),
-    Output('dt-accuracy', 'children')],
+    Output('dt-accuracy', 'children'),
+    Output('pruning-error-output', 'children'),
+    Output('ccp_alpha_dt', 'value')],
     [Input(component_id='datapoint_selection_dropdown', component_property='value')],
     [Input(component_id='impurity_criterion', component_property='value')],
     [Input(component_id='splitter_dt', component_property='value')],
@@ -1446,19 +1604,32 @@ def update_dt_depth(selected_datapoint, criterion, splitter,
                     dt_depth, min_samples_split, min_smp_lf,
                     max_leaf_nodes, ccp_alpha):
     global global_dp_selection_index
+    global global_ccp_alpha_old
+    ccp_alpha_out = ""
+
     idx = helper.get_id_for_dp(x_test, selected_datapoint)
 
 
-    dt_upd, text, accuracy  = show_decision_tree_path(idx, criterion, splitter=splitter, max_depth=dt_depth,
-                                            min_samples_split=min_samples_split, min_smp_lf=min_smp_lf,
-                                            max_features=None,
-                                            max_leaf_nodes=max_leaf_nodes,
-                                            ccp_alpha=ccp_alpha)
+
+    dt_upd, text, accuracy, ccp_alpha_too_big  = show_decision_tree_path(idx, criterion, splitter=splitter, max_depth=dt_depth,
+                                                                            min_samples_split=min_samples_split, min_smp_lf=min_smp_lf,
+                                                                            max_features=None,
+                                                                            max_leaf_nodes=max_leaf_nodes,
+                                                                            ccp_alpha=ccp_alpha)
     global_dp_selection_index = idx
+    if ccp_alpha_too_big:
+        ccp_alpha_out = "Der Baum wurde zu stark zurückgeschnitten. Der Wert war zu hoch."
+        dt_upd, text, accuracy, ccp_alpha_too_big  = show_decision_tree_path(idx, criterion, splitter=splitter, max_depth=dt_depth,
+                                                                            min_samples_split=min_samples_split, min_smp_lf=min_smp_lf,
+                                                                            max_features=None,
+                                                                            max_leaf_nodes=max_leaf_nodes,
+                                                                            ccp_alpha=global_ccp_alpha_old)
+    else:
+        global_ccp_alpha_old = ccp_alpha
 
     accuracy = "Genauigkeit: {acc}".format(acc=accuracy)
     print("DT Callback ")
-    return dt_upd, text, accuracy
+    return dt_upd, text, accuracy, ccp_alpha_out, global_ccp_alpha_old
 
 
 @app.callback(

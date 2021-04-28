@@ -81,19 +81,21 @@ def inverse_preprocessing_single(ds, datapoint):
     inversed_cat = ohe.inverse_transform(cat_features.reshape(1, -1) )
     return inversed_num, inversed_cat[0]
 
-def inverse_preprocessing_single_feature(ds, feature, isCat):
-    transformer = ds.transformer
-    # if isCat:
-    #     ohe = transformer.named_transformers_['ohe']
-    #     print("cat, feature",type(feature))
-    #     inversed_cat = ohe.inverse_transform(feature.reshape(1, -1))
-    #     return inversed_cat
-    # else:
-    #     scaler = transformer.named_transformers_['num']
-    #     print("num, feature", type(feature))
-    #     inversed_num = scaler.inverse_transform(feature)
-    #     return inversed_num
-    return feature
+def inverse_preprocessing_single_feature(ds, datapoint, feature_value, feature_index_onehot, feature_name, isCat):
+    threshold_only_dp = torch.Tensor(datapoint.tolist())
+    threshold_only_dp[feature_index_onehot] = feature_value
+    
+    inversed_num, inversed_cat = inverse_preprocessing_single(ds, threshold_only_dp)
+
+    if isCat:
+        feature_index = get_idx_for_feature(feature_name, inversed_cat)
+        inversed_feature = inversed_cat[feature_index]
+    else:
+        feature_index = get_idx_for_feature(feature_name, inversed_num)
+        inversed_feature = inversed_num[feature_index]
+        
+    print("helper, inversed threshold: ", inversed_feature)
+    return  inversed_feature
 
 
 # TODO
