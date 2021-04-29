@@ -750,7 +750,11 @@ def dash_set_layout():
     #endregion
 
     app.layout = html.Div([
-        html.Div(html.H2("Visualisierungen")),
+        dbc.Row(
+            [
+                html.Div(html.H2("Visualisierungen"))
+            ], justify="center"
+        ),
         #region datapoint selection dropdown
         html.Br(),
         dbc.Row(
@@ -803,6 +807,12 @@ def dash_set_layout():
         ),
         #endregion
         #region DT- Bereich
+        dbc.Row(
+            [
+                html.Div(html.H4("Entscheidungsbaum"))
+            ], justify="center",
+            style={'backgroundColor': 'lightgray', 'color': 'black', 'offset':'5%'}
+        ),
         dbc.Row(
             [
                 dbc.Col(
@@ -1088,6 +1098,11 @@ def dash_set_layout():
         #region Linear Modell- Bereich
         dbc.Row(
             [
+                html.Div(html.H4("Logistische Regression"))
+            ], justify="center"
+        ),
+        dbc.Row(
+            [
                 dbc.Col(
                     [
                         dbc.Row(
@@ -1097,31 +1112,14 @@ def dash_set_layout():
                                         html.Br(),
                                         html.Br(),
                                         html.Br(),
-                                        html.Br(),
-                                        html.Div("Toleranz")
-                                    ]
-                                ),
-                                dbc.Col(
-                                    [
-                                        html.Br(),
-                                        html.Br(),
-                                        html.Br(),
-                                        html.Br(),
-                                        dcc.Slider(id='tol', value=1e-4,
-                                                    max=1, min=0, step=1e-5, marks = marks_to_1)
-                                    ]
-                                )
-                            ]
-                        ),
-                        dbc.Row(
-                            [
-                                dbc.Col(
-                                    [
                                         html.Div("Inverse Regulierung")
                                     ]
                                 ),
                                 dbc.Col(
                                     [
+                                        html.Br(),
+                                        html.Br(),
+                                        html.Br(),
                                         dcc.Slider(id='C', value=1.0,
                                                 max=10, min=0, step=1, marks = marks_to_10)
                                     ]
@@ -1250,6 +1248,11 @@ def dash_set_layout():
                     [
                         dbc.Row(
                             [
+                                html.Div(html.H4("In-Sample Counterfactuals"))
+                            ], justify="center"
+                        ),
+                        dbc.Row(
+                            [
                                 dbc.Col(
                                     [
                                         html.Br(),
@@ -1345,6 +1348,11 @@ def dash_set_layout():
         #region Dice
                 dbc.Col(
                     [
+                        dbc.Row(
+                            [
+                                html.Div(html.H4("DiCE"))
+                            ], justify = "center"
+                        ),
                         dbc.Row(
                             [
                                 dbc.Col(
@@ -1469,6 +1477,11 @@ def dash_set_layout():
                     [
                         dbc.Row(
                             [
+                                html.Div(html.H4("DeepSHAP"))
+                            ], justify="center"
+                        ),
+                        dbc.Row(
+                            [
                                 html.Br(),
                                 html.Br(),
                                 html.Br(),
@@ -1511,6 +1524,11 @@ def dash_set_layout():
         #region Lrp
                 dbc.Col(
                     [
+                        dbc.Row(
+                            [
+                                html.Div(html.H4("LRP"))
+                            ], justify="center"
+                        ),
                         dbc.Row(
                             [
                                 dbc.Col(
@@ -1638,11 +1656,10 @@ def update_dt_depth(selected_datapoint, criterion, splitter,
     ],
     [Input(component_id='datapoint_selection_dropdown', component_property='value')],
     [Input(component_id='penalty', component_property='on')],
-    [Input(component_id='tol', component_property='value')],
     [Input(component_id='fit_intercept', component_property='on')],
     [Input(component_id='C', component_property='value')],
     [Input(component_id='max_iter', component_property='value')])
-def update_lin(selected_datapoint, penalty, tol,
+def update_lin(selected_datapoint, penalty,
                 fit_intercept, C, max_iter):
     idx = helper.get_id_for_dp(x_test, selected_datapoint)
     
@@ -1651,7 +1668,7 @@ def update_lin(selected_datapoint, penalty, tol,
     else:
         penalty = "none"
     
-    lin_upd, accuracy= show_linear_model_both_in_one(sample_id = idx, penalty=penalty, tol=tol,
+    lin_upd, accuracy= show_linear_model_both_in_one(sample_id = idx, penalty=penalty,
                                                         C=C, fit_intercept=fit_intercept,
                                                         max_iter=max_iter)
     print("Linear Model Callback")
