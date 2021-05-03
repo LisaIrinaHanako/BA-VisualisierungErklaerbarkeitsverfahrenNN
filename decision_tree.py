@@ -25,7 +25,7 @@ global_ccp_alpha = None
 global_classifier = None
 
 # Function to calculate DecisionTreeClassifier
-def calc_classifier(x_train, x_test, y_train, y_test, criterion='gini', 
+def calc_classifier(x_train, x_test, y_net_train, y_net_test, criterion='gini', 
                     splitter='best', max_depth=8, min_samples_split=1, min_smp_lf=0,
                     max_features=None, max_leaf_nodes=None, min_impurity_decrease=0,
                     min_impurity_split=0,ccp_alpha=0):
@@ -76,7 +76,7 @@ def calc_classifier(x_train, x_test, y_train, y_test, criterion='gini',
                                             min_impurity_decrease=min_impurity_decrease,
                                             min_impurity_split=min_impurity_split, ccp_alpha=ccp_alpha)
         # Performing classification 
-        global_classifier.fit(x_train, y_train) 
+        global_classifier.fit(x_train, y_net_train) 
     return global_classifier 
 
 def get_classifier(idx, criterion='gini', splitter='best', max_depth=8,
@@ -86,7 +86,7 @@ def get_classifier(idx, criterion='gini', splitter='best', max_depth=8,
                             min_impurity_split=0,ccp_alpha=0):
 
     x_test, y_test, x_train, y_train, y_net_test, y_net_train = helper.get_samples_and_labels(ds, clf)
-    classifier = calc_classifier(x_train, x_test, y_net_train, y_test,
+    classifier = calc_classifier(x_train, x_test, y_net_train, y_net_test,
                                 criterion = criterion, splitter=splitter, 
                                 max_depth = max_depth, min_samples_split=min_samples_split,
                                 min_smp_lf=min_smp_lf, max_features=max_features,

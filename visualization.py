@@ -654,8 +654,8 @@ def create_datapoint_overview():
     global global_dp_df
 
     if global_dp_df.empty:
-        cat_names_val = ds.categorical_variables
-        cats = ds.categories
+        cat_names_val = ds.categorical_variables + ["label"]
+        cats = ds.categories + [[0,1]]
         num_names_val = ds.numerical_variables
 
         max_name_val = dict(zip(num_names_val, [0]*len(num_names_val))) 
@@ -673,8 +673,9 @@ def create_datapoint_overview():
 
         for dp in x_test:
             inversed_num, inversed_cat = helper.inverse_preprocessing_single(ds, dp)
+            idx = helper.get_id_for_dp(x_test, dp)
             num_name_val_pair = zip(num_names_val, inversed_num.tolist())
-            cat_name_val_pair = zip(cat_names_val, inversed_cat.tolist())
+            cat_name_val_pair = zip(cat_names_val, inversed_cat.tolist() + [y_net_test[idx].item()])
 
             for name,val in num_name_val_pair:
                 cur_max = max_name_val[name]
@@ -706,7 +707,7 @@ def create_datapoint_overview():
         selected_dp.insert(2,"Numerisch: Durchschnitt Wert", avg_for_features, True)
         selected_dp.insert(3,"Kategorisch: Häufigste Ausprägung", cat_feature_value, True)
         
-        feature_names = ds.data.columns
+        feature_names = ds.data.columns.tolist() + ['Kreditwürdigkeit']
         selected_dp.insert(0,'Eigenschaften',feature_names,True)
         global_dp_df = selected_dp
     return global_dp_df
@@ -715,15 +716,15 @@ def create_datapoint_overview():
 
 def dash_set_layout():
     #region variable preparations
-    feature_names = ds.data.columns
+    feature_names = ds.data.columns.tolist() + ['Kreditwürdigkeit']
 
     selected_dp = create_datapoint_overview()
     inversed_num, inversed_cat = helper.inverse_preprocessing_single(ds, x_test[0])
-    inversed = inversed_num.tolist() + inversed_cat.tolist()
+    inversed = inversed_num.tolist() + inversed_cat.tolist() + [y_net_test[0].item()]
     selected_dp.insert(1,"Datenpunkt", inversed, True)
 
     in_sample_cfs = show_counterfactual_explanation()
-    df_datapoint = pd.DataFrame([inversed], columns=ds.numerical_variables + ds.categorical_variables)
+    df_datapoint = pd.DataFrame([inversed], columns=ds.numerical_variables + ds.categorical_variables + ['Kreditwürdigkeit'])
     in_sample_cfs = pd.concat([df_datapoint, in_sample_cfs])
     in_sample_cfs.insert(0,"Datenpunk-Typ", ['originaler Datenpunkt'] + ['Counterfactual {}'.format(i) for i in range(len(in_sample_cfs[:-1]))])
 
@@ -744,7 +745,7 @@ def dash_set_layout():
     marks_to_200 = { 50*i : "{val}".format(val = 50*i) for i in range(4)}
     marks_shap = {10*i: "{val}".format(val=10*i) for i in range(len(x_test[0]))}
     dice_cfs = show_DiCE_visualization()
-    df_datapoint = pd.DataFrame([inversed], columns=ds.numerical_variables + ds.categorical_variables)
+    df_datapoint = pd.DataFrame([inversed], columns=ds.numerical_variables + ds.categorical_variables + ['Kreditwürdigkeit'])
     dice_cfs = pd.concat([df_datapoint, dice_cfs])
     dice_cfs.insert(0,"Datenpunk-Typ", ['originaler Datenpunkt'] + ['Counterfactual {}'.format(i) for i in range(len(dice_cfs[:-1]))])
     #endregion
@@ -1597,7 +1598,7 @@ def update_dp(selected_datapoint):
     idx = helper.get_id_for_dp(x_test, selected_datapoint)
     dp_upd = create_datapoint_overview()
     inversed_num, inversed_cat = helper.inverse_preprocessing_single(ds, x_test[idx])
-    inversed = inversed_num.tolist() + inversed_cat.tolist()
+    inversed = inversed_num.tolist() + inversed_cat.tolist() + [y_net_test[idx].item()]
     dp_upd.drop(axis=1, labels="Datenpunkt", inplace=True)
     dp_upd.insert(1,"Datenpunkt", inversed, True)
 
@@ -1692,9 +1693,9 @@ def update_cf(selected_datapoint, distance_metric, n_neighbors):
 
     
     inversed_num, inversed_cat = helper.inverse_preprocessing_single(ds, x_test[idx])
-    inversed = inversed_num.tolist() + inversed_cat.tolist()
+    inversed = inversed_num.tolist() + inversed_cat.tolist() + [y_net_test[idx].item()]
 
-    df_datapoint = pd.DataFrame([inversed], columns=ds.numerical_variables + ds.categorical_variables)
+    df_datapoint = pd.DataFrame([inversed], columns=ds.numerical_variables + ds.categorical_variables + ['Kreditwürdigkeit'])
     cf_upd = pd.concat([df_datapoint, cf_upd])
     cf_upd.insert(0,"Datenpunk-Typ", ['originaler Datenpunkt'] + ['Counterfactual {}'.format(i) for i in range(len(cf_upd[:-1]))])
 
@@ -1718,7 +1719,7 @@ def update_dice(selected_datapoint, desired_class,
         desired_class = y_net_test[idx]
     
     inversed_num, inversed_cat = helper.inverse_preprocessing_single(ds, x_test[idx])
-    inversed = inversed_num.tolist() + inversed_cat.tolist()
+    inversed = inversed_num.tolist() + inversed_cat.tolist() + [y_net_test[idx].item()]
 
     dice_upd = show_DiCE_visualization(idx, no_CFs=no_CFs, desired_class=desired_class,
                                         proximity_weight = proximity_weight, diversity_weight = diversity_weight, 

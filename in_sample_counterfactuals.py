@@ -133,7 +133,7 @@ def get_cf_min_dist(neigh_dist, neigh_ind, n_neighbors, x_test, y_test, x_train,
 
 def get_cfs_df(all_cfs, x_test, y_test, sample_id = 0):
     inv_num, inv_cat = helper.inverse_preprocessing(ds, x_test, sample_id)
-    test_dp =  inv_num.tolist() + inv_cat.tolist()
+    test_dp =  inv_num.tolist() + inv_cat.tolist() + [y_test.item()] 
     newdf = []
     # test_dp.append(y_test[sample_id])
     for i,cf in enumerate(all_cfs):
