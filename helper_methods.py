@@ -84,6 +84,7 @@ def inverse_preprocessing_single(ds, datapoint):
 def inverse_preprocessing_single_feature(ds, datapoint, feature_value, feature_index_onehot, feature_name, isCat):
     threshold_only_dp = torch.Tensor(datapoint.tolist())
     threshold_only_dp[feature_index_onehot] = feature_value
+    print("index to label (", feature_index_onehot, ") ", ds.index_to_label(feature_index_onehot))
     
     inversed_num, inversed_cat = inverse_preprocessing_single(ds, threshold_only_dp)
 
@@ -123,7 +124,7 @@ def get_categorical_idx(ds):
 # Helper function to get numerical indices
 def get_idx_for_feature(feature_name, names_list):
     for i, feature in enumerate(names_list):
-        if(names_list[i] == feature):
+        if(names_list[i] == feature_name):
             return i
     return -1
 

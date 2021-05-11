@@ -112,13 +112,16 @@ def show_decision_tree_text(explanaition_text, node_index, feature, x_test, thre
 
         feature_id = feature[node_id]
         feature_name_onehot = ds.cols_onehot[feature_id]
-        is_cat_feature = feature_name_onehot.__contains__(":")
+        is_cat_feature = feature_name_onehot.__contains__(":") or feature_name_onehot.__contains__("telephone")  
 
         threshold_value = threshold[node_id]
         pred = predictions[node_id]
 
         if is_cat_feature:
-            feature_name = feature_name_onehot.split(":")[0]
+            if feature_name_onehot.__contains__("telephone"):
+                feature_name = feature_name_onehot
+            else: 
+                feature_name = feature_name_onehot.split(":")[0]
             found = False
             for i,feat in enumerate(ds.categorical_variables):
                 if feat == feature_name:
@@ -127,12 +130,16 @@ def show_decision_tree_text(explanaition_text, node_index, feature, x_test, thre
                         if cat in inversed_cat.tolist():
                             found = True
                             feature_value = cat
+                            if feature_name_onehot.__contains__("telephone"):
+                                feature_name_onehot = "telephone: " + feature_value
+                            continue
             if not found:
                 feature_value = "leer?"
 
             thres_inversed = feature_name_onehot.split(":")[1]
+            thres_inversed = thres_inversed.lstrip(' ')
 
-            if (x_test[datapoint_index, feature_id] <= threshold_value):
+            if (feature_value != thres_inversed):
                 threshold_sign = "!="
             else:
                 threshold_sign = "="
@@ -141,9 +148,9 @@ def show_decision_tree_text(explanaition_text, node_index, feature, x_test, thre
                                 thres_sign=threshold_sign, thres_inv = thres_inversed)))
         else:
             feature_name = feature_name_onehot
-            feature_value = inversed_num[helper.get_idx_for_feature(feature_name, inversed_num)]
+            feature_value = inversed_num[helper.get_idx_for_feature(feature_name, ds.numerical_variables)]
             thres_inversed = helper.inverse_preprocessing_single_feature(ds, x_test[0], threshold_value, feature_id, feature_name, False)
-            if (x_test[datapoint_index, feature_id] <= threshold_value):
+            if (feature_value <= thres_inversed):
                 threshold_sign = "<="
             else:
                 threshold_sign = ">"
@@ -326,7 +333,7 @@ def get_edge_labels(labels, node_index, feature, x_test, threshold, datapoint_in
             if (x_test[datapoint_index, feature_id] <= threshold_value):
                 threshold_sign = "<="
             else:
-                threshold_sign = ">"
+                threshold_sign = ">="
             labels.append("{feat_val} {thres_sign} {thres_val}".format(
                                     feat_val=feature_value,
                                     thres_sign=threshold_sign, 
@@ -741,8 +748,8 @@ def dash_set_layout():
     marks_to_5 = { i : "{val}".format(val = i) for i in range(5)}
     marks_to_10 = { i : "{val}".format(val = i) for i in range(10)}
     marks_to_20 = { 5*i : "{val}".format(val = 5*i) for i in range(4)}
-    marks_to_100 = { 10*i : "{val}".format(val = 10*i) for i in range(10)}
-    marks_to_200 = { 50*i : "{val}".format(val = 50*i) for i in range(4)}
+    marks_to_299 = { 30*i : "{val}".format(val = 30*i) for i in range(10)}
+    marks_to_200 = { 50*i : "{val}".format(val = 50*i) for i in range(10)}
     marks_shap = {10*i: "{val}".format(val=10*i) for i in range(len(x_test[0]))}
     dice_cfs = show_DiCE_visualization()
     df_datapoint = pd.DataFrame([inversed], columns=ds.numerical_variables + ds.categorical_variables + ['Kreditwürdigkeit'])
@@ -833,10 +840,10 @@ def dash_set_layout():
                                             dcc.Slider(
                                                 id='input_dt_depth', 
                                                 value=8,
-                                                max=100, 
+                                                max=20, 
                                                 min=2, 
                                                 step=1, 
-                                                marks = marks_to_100
+                                                marks = marks_to_20
                                             )
                                         )
                                     ]
@@ -858,10 +865,10 @@ def dash_set_layout():
                                             dcc.Slider(
                                                 id='min_samples_split_dt', 
                                                 value=2,
-                                                max=100, 
+                                                max=299, 
                                                 min=2, 
                                                 step=1, 
-                                                marks = marks_to_100
+                                                marks = marks_to_299
                                             )
                                         )
                                     ]
@@ -883,10 +890,10 @@ def dash_set_layout():
                                             dcc.Slider(
                                                 id='min_smp_lf_dt', 
                                                 value=1,
-                                                max=100, 
+                                                max=299, 
                                                 min=1, 
                                                 step=1, 
-                                                marks = marks_to_100
+                                                marks = marks_to_299
                                             )
                                         )
                                     ]
@@ -908,41 +915,16 @@ def dash_set_layout():
                                             dcc.Slider(
                                                 id='max_leaf_nodes_dt', 
                                                 value=None,
-                                                max=100, 
+                                                max=299, 
                                                 min=1, 
                                                 step=1, 
-                                                marks = marks_to_100
+                                                marks = marks_to_299
                                             )
                                         )
                                     ]
                                 )
                             ]
                         ),
-                        # dbc.Row(
-                        #     [
-                        #         dbc.Col(
-                        #             [
-                        #                 html.Div(
-                        #                     "Minimale Unreinheitsänderung"
-                        #                 )
-                        #             ]
-                        #         ),
-                        #         dbc.Col(
-                        #             [
-                        #                 html.Div(
-                        #                     dcc.Slider(
-                        #                         id='min_impurity_decrease_dt', 
-                        #                         value=0.0,
-                        #                         max=1, 
-                        #                         min=0.0, 
-                        #                         step=1e-3, 
-                        #                         marks = marks_to_1
-                        #                     )
-                        #                 )
-                        #             ]
-                        #         )
-                        #     ]
-                        # ),
                         dbc.Row(
                             [
                                 dbc.Col(
@@ -1266,7 +1248,7 @@ def dash_set_layout():
                                         html.Br(),
                                         html.Br(),
                                         dcc.Slider(id='n_neighbors', value=5.0,
-                                                    max=100, min=0.0, step=1, marks = marks_to_100)
+                                                    max=20, min=0.0, step=1, marks = marks_to_20)
                                     ]
                                 )
                             ],
@@ -1383,7 +1365,7 @@ def dash_set_layout():
                                 dbc.Col(
                                     [
                                         dcc.Slider(id='proximity_weight', value=0.5,
-                                                    max=10, min=0, step=0.1, marks = marks_to_10),
+                                                    max=1, min=0, step=0.01, marks = marks_to_1),
                                     ]
                                 )
                             ]
@@ -1398,7 +1380,7 @@ def dash_set_layout():
                                 dbc.Col(
                                     [
                                         dcc.Slider(id='diversity_weight', value=0.1,
-                                                    max=10, min=0, step=0.1, marks = marks_to_10),
+                                                    max=1, min=0, step=0.01, marks = marks_to_1),
                                     ]
                                 )
                             ]
@@ -1726,7 +1708,7 @@ def update_dice(selected_datapoint, desired_class,
                                         yloss_type='hinge_loss', diversity_loss_type='dpp_style:inverse_dist')
 
     
-    df_datapoint = pd.DataFrame([inversed], columns=ds.numerical_variables + ds.categorical_variables)
+    df_datapoint = pd.DataFrame([inversed], columns=ds.numerical_variables + ds.categorical_variables + ['Kreditwürdigkeit'])
     dice_upd = pd.concat([df_datapoint, dice_upd])
     dice_upd.insert(0,"Datenpunk-Typ", ['originaler Datenpunkt'] + ['Counterfactual {}'.format(i) for i in range(len(dice_upd[:-1]))])
 
